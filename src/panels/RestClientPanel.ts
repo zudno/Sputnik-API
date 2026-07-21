@@ -17,11 +17,17 @@ export class RestClientPanel {
             vscode.ViewColumn.One,
             { 
                 enableScripts: true,
-                retainContextWhenHidden: true // Mantiene el estado si el usuario cambia de pestaña
+                retainContextWhenHidden: true, // Mantiene el estado si el usuario cambia de pestaña
+                localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'dist')] // Permite cargar CSS compilado
             }
         );
 
-        panel.webview.html = this.getHtmlContent();
+        // Genera la URI segura para cargar el CSS compilado de Tailwind
+        const tailwindUri = panel.webview.asWebviewUri(
+            vscode.Uri.joinPath(context.extensionUri, 'dist', 'tailwind.css')
+        );
+
+        panel.webview.html = this.getHtmlContent(tailwindUri);
 
         // Escuchar mensajes provenientes del Webview
         panel.webview.onDidReceiveMessage(
@@ -44,114 +50,54 @@ export class RestClientPanel {
     }
 
     /**
-     * Genera y retorna el código HTML, CSS y JS embebido para la interfaz del usuario.
+     * Genera y retorna el código HTML y JS embebido, inyectando Tailwind CSS.
+     * @param tailwindUri La URI segura para cargar el archivo CSS compilado.
      * @returns Un string con el documento HTML completo.
      */
-    private static getHtmlContent(): string {
+    private static getHtmlContent(tailwindUri: vscode.Uri): string {
+        // Clases comunes de Tailwind reutilizadas
+        const inputClasses = "bg-vsc-input-background text-vsc-input-foreground border border-vsc-input-border p-2 rounded focus:outline focus:outline-1 focus:outline-vsc-focus focus:border-vsc-focus box-border";
+        const labelClasses = "mb-1 text-sm";
+        
         return `<!DOCTYPE html>
         <html lang="es">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Zudno Client</title>
-            <style>
-                body {
-                    font-family: var(--vscode-font-family);
-                    background-color: var(--vscode-editor-background);
-                    color: var(--vscode-editor-foreground);
-                    padding: 20px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 15px;
-                }
-                .row {
-                    display: flex;
-                    gap: 10px;
-                }
-                input, select, textarea {
-                    background-color: var(--vscode-input-background);
-                    color: var(--vscode-input-foreground);
-                    border: 1px solid var(--vscode-input-border);
-                    padding: 8px;
-                    border-radius: 4px;
-                    font-family: inherit;
-                    box-sizing: border-box;
-                }
-                input:focus, select:focus, textarea:focus {
-                    outline: 1px solid var(--vscode-focusBorder);
-                    border-color: var(--vscode-focusBorder);
-                }
-                .url-input {
-                    flex-grow: 1;
-                }
-                button {
-                    background-color: var(--vscode-button-background);
-                    color: var(--vscode-button-foreground);
-                    border: none;
-                    padding: 8px 16px;
-                    cursor: pointer;
-                    border-radius: 4px;
-                    font-weight: bold;
-                }
-                button:hover {
-                    background-color: var(--vscode-button-hoverBackground);
-                }
-                textarea {
-                    width: 100%;
-                    min-height: 100px;
-                    resize: vertical;
-                    font-family: monospace;
-                }
-                .section {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 5px;
-                }
-                .response-container {
-                    border: 1px solid var(--vscode-panel-border);
-                    padding: 10px;
-                    background-color: var(--vscode-editor-inactiveSelectionBackground);
-                    border-radius: 4px;
-                    overflow: auto;
-                    max-height: 400px;
-                }
-                pre {
-                    margin: 0;
-                }
-                .status {
-                    font-weight: bold;
-                    margin-bottom: 10px;
-                }
-            </style>
+            <!-- Inyectar Tailwind CSS -->
+            <link href="${tailwindUri}" rel="stylesheet">
         </head>
-        <body>
-            <h2>Zudno REST Client</h2>
-            <div class="row">
-                <select id="method">
+        <body class="font-sans bg-vsc-background text-vsc-foreground p-5 flex flex-col gap-4">
+            
+            <h2 class="text-xl font-bold mb-2">Zudno REST Client</h2>
+            
+            <div class="flex gap-2">
+                <select id="method" class="${inputClasses} cursor-pointer">
                     <option value="GET">GET</option>
                     <option value="POST">POST</option>
                     <option value="PUT">PUT</option>
                     <option value="DELETE">DELETE</option>
                     <option value="PATCH">PATCH</option>
                 </select>
-                <input type="text" id="url" class="url-input" placeholder="https://api.example.com/data" value="https://jsonplaceholder.typicode.com/todos/1">
-                <button id="sendBtn">Send</button>
+                <input type="text" id="url" class="${inputClasses} flex-grow font-mono" placeholder="https://api.example.com/data" value="https://jsonplaceholder.typicode.com/todos/1">
+                <button id="sendBtn" class="bg-vsc-button-background text-vsc-button-foreground py-2 px-4 rounded font-bold hover:bg-vsc-button-hover border-none cursor-pointer">Send</button>
             </div>
 
-            <div class="section">
-                <label for="headers">Headers (uno por línea, formato Clave: Valor)</label>
-                <textarea id="headers" placeholder="Content-Type: application/json"></textarea>
+            <div class="flex flex-col">
+                <label for="headers" class="${labelClasses}">Headers (uno por línea, formato Clave: Valor)</label>
+                <textarea id="headers" class="${inputClasses} w-full min-h-[100px] resize-y font-mono" placeholder="Content-Type: application/json"></textarea>
             </div>
 
-            <div class="section">
-                <label for="body">Body (JSON, Text, etc.)</label>
-                <textarea id="body" placeholder='{"key": "value"}'></textarea>
+            <div class="flex flex-col">
+                <label for="body" class="${labelClasses}">Body (JSON, Text, etc.)</label>
+                <textarea id="body" class="${inputClasses} w-full min-h-[100px] resize-y font-mono" placeholder='{"key": "value"}'></textarea>
             </div>
 
-            <h3>Response</h3>
-            <div class="response-container" id="responseBox">
-                <div id="status" class="status">Waiting for request...</div>
-                <pre id="responseBody"></pre>
+            <h3 class="text-lg font-semibold mt-2">Response</h3>
+            <div id="responseBox" class="border border-vsc-panel-border p-3 bg-vsc-inactive rounded overflow-auto max-h-[400px]">
+                <div id="status" class="font-bold mb-2">Waiting for request...</div>
+                <pre id="responseBody" class="m-0 font-mono text-sm"></pre>
             </div>
 
             <script>
@@ -164,6 +110,7 @@ export class RestClientPanel {
                     const body = document.getElementById('body').value;
 
                     document.getElementById('status').innerText = 'Loading...';
+                    document.getElementById('status').className = 'font-bold mb-2';
                     document.getElementById('responseBody').innerText = '';
 
                     vscode.postMessage({
@@ -180,12 +127,12 @@ export class RestClientPanel {
                         
                         if (message.data.error) {
                             statusEl.innerText = 'Error';
-                            statusEl.style.color = 'var(--vscode-errorForeground)';
+                            statusEl.className = 'font-bold mb-2 text-vsc-error';
                             bodyEl.innerText = message.data.error;
                         } else {
                             const d = message.data;
                             statusEl.innerText = \`Status: \${d.status} \${d.statusText} | Time: \${d.time}ms\`;
-                            statusEl.style.color = d.status >= 200 && d.status < 300 ? '#4caf50' : 'var(--vscode-errorForeground)';
+                            statusEl.className = \`font-bold mb-2 \${d.status >= 200 && d.status < 300 ? 'text-vsc-success' : 'text-vsc-error'}\`;
                             
                             try {
                                 if (typeof d.data === 'object') {
