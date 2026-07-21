@@ -1,7 +1,7 @@
 {
-    "name": "zudno-pets",
-    "displayName": "pets",
-    "description": "Mascota interactiva para el editor",
+    "name": "zudno-postman",
+    "displayName": "Zudno Client",
+    "description": "Cliente REST básico dentro del editor",
     "version": "0.0.2",
     "publisher": "zudno",
     "repository": {
@@ -19,10 +19,28 @@
     "contributes": {
         "commands": [
             {
-                "command": "zudno-pets.helloWorld",
-                "title": "Hello World"
+                "command": "zudno-postman.open",
+                "title": "Zudno Client: Open"
             }
-        ]
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "zudno-postman-explorer",
+                    "title": "Zudno Client",
+                    "icon": "media/icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "zudno-postman-explorer": [
+                {
+                    "id": "zudno-postman-view",
+                    "name": "Zudno Client",
+                    "icon": "media/icon.svg"
+                }
+            ]
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run package",
@@ -39,20 +57,23 @@
         "test": "vscode-test"
     },
     "devDependencies": {
-        "@types/vscode": "^1.107.0",
         "@types/mocha": "^10.0.10",
         "@types/node": "24.x",
-        "typescript-eslint": "^8.61.1",
-        "eslint": "^10.5.0",
+        "@types/vscode": "^1.107.0",
+        "@vscode/test-cli": "^0.0.15",
+        "@vscode/test-electron": "^3.0.0",
         "esbuild": "^0.28.1",
+        "eslint": "^10.5.0",
         "npm-run-all": "^4.1.5",
         "typescript": "^6.0.3",
-        "@vscode/test-cli": "^0.0.15",
-        "@vscode/test-electron": "^3.0.0"
+        "typescript-eslint": "^8.61.1"
     },
     "overrides": {
         "diff": "^8.0.4",
         "serialize-javascript": "^7.0.6"
     },
-    "license": "MIT"
+    "license": "MIT",
+    "dependencies": {
+        "axios": "^1.18.1"
+    }
 }
