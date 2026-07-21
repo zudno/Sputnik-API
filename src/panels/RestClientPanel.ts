@@ -56,7 +56,7 @@ export class RestClientPanel {
      */
     private static getHtmlContent(tailwindUri: vscode.Uri): string {
         // Clases comunes de Tailwind reutilizadas
-        const inputClasses = "bg-vsc-input-background text-vsc-input-foreground border border-vsc-input-border p-2 rounded focus:outline focus:outline-1 focus:outline-vsc-focus focus:border-vsc-focus box-border";
+        const inputClasses = "bg-transparent text-vsc-input-foreground border border-vsc-panel-border p-2 rounded focus:outline focus:outline-1 focus:outline-vsc-focus focus:border-vsc-focus box-border";
         const labelClasses = "mb-1 text-sm";
         
         return `<!DOCTYPE html>
@@ -73,15 +73,19 @@ export class RestClientPanel {
             <h2 class="text-xl font-bold mb-2">Zudno REST Client</h2>
             
             <div class="flex gap-2">
-                <select id="method" class="${inputClasses} cursor-pointer">
-                    <option value="GET">GET</option>
-                    <option value="POST">POST</option>
-                    <option value="PUT">PUT</option>
-                    <option value="DELETE">DELETE</option>
-                    <option value="PATCH">PATCH</option>
-                </select>
-                <input type="text" id="url" class="${inputClasses} flex-grow font-mono" placeholder="https://api.example.com/data" value="https://jsonplaceholder.typicode.com/todos/1">
-                <button id="sendBtn" class="bg-vsc-button-background text-vsc-button-foreground py-2 px-4 rounded font-bold hover:bg-vsc-button-hover border-none cursor-pointer">Send</button>
+                <div class="flex flex-grow items-stretch border border-vsc-panel-border rounded bg-transparent focus-within:border-vsc-focus focus-within:outline focus-within:outline-1 focus-within:outline-vsc-focus">
+                    <div class="flex items-center border-r border-vsc-panel-border relative">
+                        <select id="method" class="bg-transparent font-bold cursor-pointer outline-none border-none pl-3 pr-7 py-3 appearance-none text-vsc-http-get h-full" style="background-image: url('data:image/svg+xml;utf8,<svg fill=\\'%239ca3af\\' height=\\'20\\' viewBox=\\'0 0 24 24\\' width=\\'20\\' xmlns=\\'http://www.w3.org/2000/svg\\'><path d=\\'M7 10l5 5 5-5z\\'/></svg>'); background-repeat: no-repeat; background-position: right 4px center;">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                            <option value="PATCH">PATCH</option>
+                        </select>
+                    </div>
+                    <input type="text" id="url" class="bg-transparent text-vsc-input-foreground flex-grow font-mono px-3 py-3 outline-none border-none w-full" placeholder="https://api.example.com/data" value="https://jsonplaceholder.typicode.com/todos/1">
+                </div>
+                <button id="sendBtn" class="bg-vsc-postman-blue text-white py-3 px-6 font-bold hover:bg-vsc-postman-hover border-none cursor-pointer rounded transition-colors">Send</button>
             </div>
 
             <div class="flex flex-col">
@@ -102,6 +106,22 @@ export class RestClientPanel {
 
             <script>
                 const vscode = acquireVsCodeApi();
+                
+                // Color dinámico del select según el método
+                const methodEl = document.getElementById('method');
+                const methodColors = {
+                    'GET': 'text-vsc-http-get',
+                    'POST': 'text-vsc-http-post',
+                    'PUT': 'text-vsc-http-put',
+                    'PATCH': 'text-vsc-http-patch',
+                    'DELETE': 'text-vsc-http-delete'
+                };
+                
+                methodEl.addEventListener('change', () => {
+                    Object.values(methodColors).forEach(c => methodEl.classList.remove(c));
+                    const newColor = methodColors[methodEl.value] || 'text-vsc-foreground';
+                    methodEl.classList.add(newColor);
+                });
                 
                 document.getElementById('sendBtn').addEventListener('click', () => {
                     const url = document.getElementById('url').value;

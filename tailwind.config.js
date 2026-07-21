@@ -25,7 +25,18 @@ module.exports = {
           },
           inactive: 'var(--vscode-editor-inactiveSelectionBackground)',
           error: 'var(--vscode-errorForeground)',
-          success: '#4caf50' // Mismo color verde de antes
+          success: '#4caf50', // Mismo color verde de antes
+          http: {
+            get: '#4caf50',
+            post: '#ffb300',
+            put: '#2196f3',
+            patch: '#9c27b0',
+            delete: '#f44336'
+          },
+          postman: {
+            blue: '#0065D3',
+            hover: '#0055B3'
+          }
         }
       },
       fontFamily: {
