@@ -19,7 +19,7 @@ function App() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
-      if (message.command === 'apiResponse') {
+      if (message.command === 'response') {
         setLoading(false);
         setResponse(message.data);
       }
@@ -33,11 +33,13 @@ function App() {
     setLoading(true);
     setResponse(null);
     vscode.postMessage({
-      command: 'requestApi',
-      method,
-      url,
-      headers,
-      body
+      command: 'sendRequest',
+      data: {
+        method,
+        url,
+        headers,
+        body
+      }
     });
   };
 
