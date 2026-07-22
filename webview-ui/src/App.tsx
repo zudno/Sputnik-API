@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { RequestPanel } from "./components/RequestPanel";
-import { HeadersPanel } from "./components/HeadersPanel";
-import { BodyPanel } from "./components/BodyPanel";
+import { RequestTabs } from "./components/RequestTabs";
 import { ResponsePanel } from "./components/ResponsePanel";
 
 // @ts-ignore
@@ -56,14 +55,11 @@ function App() {
         onSend={handleSend} 
       />
 
-      <HeadersPanel 
-        headers={headers} 
-        setHeaders={setHeaders} 
-      />
-
-      <BodyPanel 
-        body={body} 
-        setBody={setBody} 
+      <RequestTabs 
+        headers={headers}
+        setHeaders={setHeaders}
+        body={body}
+        setBody={setBody}
       />
 
       <ResponsePanel 
