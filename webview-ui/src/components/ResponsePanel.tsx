@@ -7,6 +7,15 @@ interface ResponsePanelProps {
 export function ResponsePanel({ response }: ResponsePanelProps) {
   if (!response) return null;
 
+  const isSuccess = response.status >= 200 && response.status < 300;
+  const responseSize = typeof response.data === 'object' 
+    ? new TextEncoder().encode(JSON.stringify(response.data)).length 
+    : new TextEncoder().encode(String(response.data)).length;
+  
+  const sizeText = responseSize > 1024 
+    ? `${(responseSize / 1024).toFixed(2)} KB` 
+    : `${responseSize} B`;
+
   return (
     <div className="flex flex-col h-full">
       <div className="rounded py-3 flex flex-col flex-grow bg-vsc-editor-bg h-full">
@@ -17,8 +26,18 @@ export function ResponsePanel({ response }: ResponsePanelProps) {
           </>
         ) : (
           <>
-            <div className={`font-bold mb-2 px-1 ${response.status >= 200 && response.status < 300 ? 'text-vsc-success' : 'text-vsc-error'}`}>
-              Status: {response.status} {response.statusText} | Time: {response.time}ms
+            <div className="flex items-center text-[13px] mb-3 px-1 ml-auto justify-end gap-2 font-sans">
+              <span className={`font-semibold px-2 py-0.5 rounded text-[12px] ${isSuccess ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>
+                {response.status} {response.statusText}
+              </span>
+              <span className="text-gray-500">&middot;</span>
+              <span className="text-gray-400">
+                {response.time} ms
+              </span>
+              <span className="text-gray-500">&middot;</span>
+              <span className="text-gray-400">
+                {sizeText}
+              </span>
             </div>
             <div className="flex-grow min-h-0 overflow-hidden">
               <Editor
