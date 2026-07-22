@@ -1,5 +1,6 @@
 import Editor from '@monaco-editor/react';
 import { useState } from 'react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 interface BodyPanelProps {
   body: string;
@@ -9,6 +10,16 @@ interface BodyPanelProps {
 export function BodyPanel({ body, setBody }: BodyPanelProps) {
   const [language, setLanguage] = useState('json');
 
+  const languages = [
+    { value: 'text', label: 'Text' },
+    { value: 'javascript', label: 'JavaScript' },
+    { value: 'json', label: 'JSON' },
+    { value: 'html', label: 'HTML' },
+    { value: 'xml', label: 'XML' },
+  ];
+
+  const selectedLabel = languages.find(l => l.value === language)?.label || 'JSON';
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-4 mb-2 text-[13px]">
@@ -17,16 +28,30 @@ export function BodyPanel({ body, setBody }: BodyPanelProps) {
           <label htmlFor="raw" className="cursor-pointer">raw</label>
         </div>
         
-        <select 
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="bg-transparent border-none text-blue-500 font-semibold text-[13px] cursor-pointer outline-none hover:text-blue-400"
-        >
-          <option value="text">Text</option>
-          <option value="json">JSON</option>
-          <option value="xml">XML</option>
-          <option value="html">HTML</option>
-        </select>
+        <DropdownMenu.Root modal={false}>
+          <DropdownMenu.Trigger asChild>
+            <button className="flex items-center gap-1 text-blue-500 font-semibold text-[13px] hover:text-blue-400 cursor-pointer bg-transparent border-none outline-none p-0">
+              {selectedLabel}
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </DropdownMenu.Trigger>
+          
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content align="start" sideOffset={5} className="bg-[#1c1c1c] border border-[#2b2b2b] rounded-md shadow-2xl py-1.5 z-50 w-[180px]">
+              {languages.map((lang) => (
+                <DropdownMenu.Item 
+                  key={lang.value}
+                  onSelect={() => setLanguage(lang.value)}
+                  className="px-3 py-1.5 mx-1.5 my-0.5 rounded-md cursor-pointer text-[13px] font-sans outline-none text-[#cccccc] focus:bg-[#333333] focus:text-white transition-colors"
+                >
+                  {lang.label}
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
       
       <div className="flex-grow min-h-[150px] border border-vsc-panel-border rounded overflow-hidden">
