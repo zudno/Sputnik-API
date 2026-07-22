@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Panel, Group, Separator } from "react-resizable-panels";
 import { RequestPanel } from "./components/RequestPanel";
 import { RequestTabs } from "./components/RequestTabs";
 import { ResponsePanel } from "./components/ResponsePanel";
@@ -43,28 +44,44 @@ function App() {
   };
 
   return (
-    <div className="p-5 flex flex-col gap-4">
-      <h2 className="text-xl font-bold mb-2">Sputnik API</h2>
-      
-      <RequestPanel 
-        method={method} 
-        setMethod={setMethod} 
-        url={url} 
-        setUrl={setUrl} 
-        loading={loading} 
-        onSend={handleSend} 
-      />
+    <div className="flex flex-col h-screen overflow-hidden text-vsc-foreground bg-vsc-editor-bg">
+      <div className="p-5 pb-2 flex-shrink-0 flex flex-col gap-4">
+        <h2 className="text-xl font-bold">Sputnik API</h2>
+        
+        <RequestPanel 
+          method={method} 
+          setMethod={setMethod} 
+          url={url} 
+          setUrl={setUrl} 
+          loading={loading} 
+          onSend={handleSend} 
+        />
+      </div>
 
-      <RequestTabs 
-        headers={headers}
-        setHeaders={setHeaders}
-        body={body}
-        setBody={setBody}
-      />
+      <Group orientation="vertical" className="flex-grow">
+        <Panel defaultSize={45} minSize={20} className="flex flex-col">
+          <div className="px-5 h-full overflow-hidden flex flex-col">
+            <RequestTabs 
+              headers={headers}
+              setHeaders={setHeaders}
+              body={body}
+              setBody={setBody}
+            />
+          </div>
+        </Panel>
 
-      <ResponsePanel 
-        response={response} 
-      />
+        <Separator className="h-2 cursor-row-resize my-1 group relative flex items-center justify-center">
+          <div className="h-[1px] w-full mx-5 transition-colors bg-vsc-panel-border group-hover:bg-vsc-focus group-active:bg-vsc-focus"></div>
+        </Separator>
+
+        <Panel defaultSize={55} minSize={20} className="flex flex-col">
+          <div className="px-5 pb-5 h-full overflow-auto flex flex-col">
+            <ResponsePanel 
+              response={response} 
+            />
+          </div>
+        </Panel>
+      </Group>
     </div>
   );
 }

@@ -6,9 +6,9 @@ export function ResponsePanel({ response }: ResponsePanelProps) {
   if (!response) return null;
 
   return (
-    <>
-      <h3 className="text-lg font-semibold mt-2">Response</h3>
-      <div className="border border-vsc-panel-border rounded p-3 overflow-auto max-h-[400px]">
+    <div className="flex flex-col h-full">
+      <h3 className="text-lg font-semibold mb-2 flex-shrink-0">Response</h3>
+      <div className="border border-vsc-panel-border rounded p-3 overflow-auto flex-grow bg-vsc-editor-bg">
         {response.error ? (
           <>
             <div className="font-bold mb-2 text-vsc-error">Error</div>
@@ -25,6 +25,6 @@ export function ResponsePanel({ response }: ResponsePanelProps) {
           </>
         )}
       </div>
-    </>
+    </div>
   );
 }
