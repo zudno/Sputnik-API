@@ -30,8 +30,8 @@ export class ActivityBarProvider implements vscode.TreeDataProvider<vscode.TreeI
             
             // Comando que se ejecutará al hacer clic
             item.command = {
-                command: 'zudno-postman.open',
-                title: 'Abrir Cliente REST'
+                command: 'sputnik-api.open',
+                title: 'Abrir Sputnik API'
             };
             
             // Ícono nativo de VS Code

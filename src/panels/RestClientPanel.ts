@@ -12,8 +12,8 @@ export class RestClientPanel {
      */
     public static render(context: vscode.ExtensionContext): void {
         const panel = vscode.window.createWebviewPanel(
-            'zudnoPostman',
-            'Zudno Client',
+            'sputnikApi',
+            'Sputnik API',
             vscode.ViewColumn.One,
             { 
                 enableScripts: true,
@@ -65,7 +65,7 @@ export class RestClientPanel {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Zudno Client</title>
+            <title>Sputnik API</title>
             <link href="${styleUri}" rel="stylesheet">
         </head>
         <body>

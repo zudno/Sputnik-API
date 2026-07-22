@@ -1,6 +1,6 @@
 {
-    "name": "zudno-postman",
-    "displayName": "Zudno Client",
+    "name": "sputnik-api",
+    "displayName": "Sputnik API",
     "description": "Cliente REST básico dentro del editor",
     "version": "0.0.2",
     "publisher": "zudno",
@@ -19,24 +19,24 @@
     "contributes": {
         "commands": [
             {
-                "command": "zudno-postman.open",
-                "title": "Zudno Client: Open"
+                "command": "sputnik-api.open",
+                "title": "Sputnik API: Open"
             }
         ],
         "viewsContainers": {
             "activitybar": [
                 {
-                    "id": "zudno-postman-explorer",
-                    "title": "Zudno Client",
+                    "id": "sputnik-api-explorer",
+                    "title": "Sputnik API",
                     "icon": "media/icon.svg"
                 }
             ]
         },
         "views": {
-            "zudno-postman-explorer": [
+            "sputnik-api-explorer": [
                 {
-                    "id": "zudno-postman-view",
-                    "name": "Zudno Client",
+                    "id": "sputnik-api-view",
+                    "name": "Sputnik API",
                     "icon": "media/icon.svg"
                 }
             ]

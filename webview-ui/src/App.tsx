@@ -43,7 +43,7 @@ function App() {
 
   return (
     <div className="p-5 flex flex-col gap-4">
-      <h2 className="text-xl font-bold mb-2">Zudno REST Client</h2>
+      <h2 className="text-xl font-bold mb-2">Sputnik API</h2>
       
       <RequestPanel 
         method={method} 
