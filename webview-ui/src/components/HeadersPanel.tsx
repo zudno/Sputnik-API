@@ -126,12 +126,12 @@ export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
           />
         ) : (
           <div className="flex flex-col h-full overflow-auto bg-vsc-editor-bg">
-            <div className="grid grid-cols-[44px_1fr_1fr_1fr_40px] border-b border-vsc-panel-border bg-vsc-editor-bg font-semibold sticky top-0 z-10 text-[12px]">
-              <div className="p-2 border-r border-vsc-panel-border flex items-center justify-center"></div>
-              <div className="p-2 border-r border-vsc-panel-border flex items-center">Key</div>
-              <div className="p-2 border-r border-vsc-panel-border flex items-center">Value</div>
-              <div className="p-2 border-r border-vsc-panel-border flex items-center">Description</div>
-              <div className="p-2"></div>
+            <div className="grid grid-cols-[44px_1fr_1fr_1fr_40px] border-b border-vsc-panel-border bg-vsc-editor-bg font-semibold sticky top-0 z-10 text-[12px] h-[34px]">
+              <div className="border-r border-vsc-panel-border flex items-center justify-center"></div>
+              <div className="px-2 border-r border-vsc-panel-border flex items-center">Key</div>
+              <div className="px-2 border-r border-vsc-panel-border flex items-center">Value</div>
+              <div className="px-2 border-r border-vsc-panel-border flex items-center">Description</div>
+              <div className="px-2"></div>
             </div>
             
             <div className="flex-grow flex flex-col">
@@ -184,7 +184,7 @@ export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
                       setDraggedIndex(null);
                       setDragOverIndex(null);
                     }}
-                    className={`relative grid grid-cols-[44px_1fr_1fr_1fr_40px] border-b border-vsc-panel-border group transition-colors
+                    className={`relative h-[34px] grid grid-cols-[44px_1fr_1fr_1fr_40px] border-b border-vsc-panel-border group transition-colors
                       ${isLastEmptyRow ? '' : 'hover:bg-[#222222]'}
                       ${isDragged ? 'opacity-50 bg-[#2a2d2e]' : ''}
                     `}
@@ -222,35 +222,35 @@ export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
                     </div>
 
                     {/* Key Column */}
-                    <div className="border-r border-vsc-panel-border py-[4px] px-[3px]">
+                    <div className="border-r border-vsc-panel-border py-[5px] px-[3px]">
                       <input 
                         type="text" 
                         value={header.key}
                         onChange={(e) => updateHeader(header.id, 'key', e.target.value)}
                         placeholder="Key"
-                        className="w-full h-full px-2 py-1 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
+                        className="w-full h-full px-2 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
                       />
                     </div>
 
                     {/* Value Column */}
-                    <div className="border-r border-vsc-panel-border py-[4px] px-[3px]">
+                    <div className="border-r border-vsc-panel-border py-[5px] px-[3px]">
                       <input 
                         type="text" 
                         value={header.value}
                         onChange={(e) => updateHeader(header.id, 'value', e.target.value)}
                         placeholder="Value"
-                        className="w-full h-full px-2 py-1 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
+                        className="w-full h-full px-2 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
                       />
                     </div>
 
                     {/* Description Column */}
-                    <div className="border-r border-vsc-panel-border py-[4px] px-[3px]">
+                    <div className="border-r border-vsc-panel-border py-[5px] px-[3px]">
                       <input 
                         type="text" 
                         value={header.description}
                         onChange={(e) => updateHeader(header.id, 'description', e.target.value)}
                         placeholder="Description"
-                        className="w-full h-full px-2 py-1 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
+                        className="w-full h-full px-2 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
                       />
                     </div>
 
