@@ -3,6 +3,7 @@ import { Panel, Group, Separator } from "react-resizable-panels";
 import { RequestPanel } from "./components/RequestPanel";
 import { RequestTabs } from "./components/RequestTabs";
 import { ResponsePanel } from "./components/ResponsePanel";
+import type { HeaderItem } from "./types";
 
 // @ts-ignore
 const vscode = acquireVsCodeApi();
@@ -10,7 +11,9 @@ const vscode = acquireVsCodeApi();
 function App() {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("https://jsonplaceholder.typicode.com/todos/1");
-  const [headers, setHeaders] = useState("");
+  const [headers, setHeaders] = useState<HeaderItem[]>([
+    { id: '1', key: '', value: '', description: '', enabled: true }
+  ]);
   const [body, setBody] = useState("");
   
   const [response, setResponse] = useState<any>(null);
@@ -32,12 +35,19 @@ function App() {
   const handleSend = () => {
     setLoading(true);
     setResponse(null);
+    
+    // Serialize headers to string for backend
+    const headersString = headers
+      .filter(h => h.enabled && h.key.trim() !== '')
+      .map(h => `${h.key.trim()}: ${h.value}`)
+      .join('\n');
+
     vscode.postMessage({
       command: 'sendRequest',
       data: {
         method,
         url,
-        headers,
+        headers: headersString,
         body
       }
     });
