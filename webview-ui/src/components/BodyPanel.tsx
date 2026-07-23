@@ -23,7 +23,7 @@ export function BodyPanel({ body, setBody }: BodyPanelProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-4 mb-2 text-[13px]">
+      <div className="flex items-center gap-4 mb-4 text-[13px]">
         <div className="flex items-center gap-4 text-vsc-foreground">
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input 
@@ -35,7 +35,7 @@ export function BodyPanel({ body, setBody }: BodyPanelProps) {
                 setBodyType('none');
                 setBody('');
               }}
-              className="accent-blue-500 cursor-pointer" 
+              className="appearance-none w-3.5 h-3.5 rounded-full border border-[#888888] checked:border-[4px] checked:border-blue-500 checked:bg-white bg-transparent outline-none cursor-pointer m-0" 
             />
             none
           </label>
@@ -46,7 +46,7 @@ export function BodyPanel({ body, setBody }: BodyPanelProps) {
               value="raw"
               checked={bodyType === 'raw'}
               onChange={() => setBodyType('raw')}
-              className="accent-blue-500 cursor-pointer" 
+              className="appearance-none w-3.5 h-3.5 rounded-full border border-[#888888] checked:border-[4px] checked:border-blue-500 checked:bg-white bg-transparent outline-none cursor-pointer m-0" 
             />
             raw
           </label>
