@@ -215,7 +215,7 @@ export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
                             type="checkbox"
                             checked={header.enabled}
                             onChange={(e) => updateHeader(header.id, 'enabled', e.target.checked)}
-                            className="appearance-none w-3.5 h-3.5 rounded-sm border border-[#888888] checked:bg-blue-500 checked:border-blue-500 bg-transparent outline-none cursor-pointer flex items-center justify-center after:content-[''] checked:after:block after:hidden after:w-[4px] after:h-[8px] after:border-r-[1.5px] after:border-b-[1.5px] after:border-white after:rotate-45 after:-mt-[2px] shrink-0"
+                            className="appearance-none w-3.5 h-3.5 rounded-sm border border-[#888888] checked:bg-white checked:border-white bg-transparent outline-none cursor-pointer flex items-center justify-center after:content-[''] checked:after:block after:hidden after:w-[4px] after:h-[8px] after:border-r-2 after:border-b-2 after:border-[#1e1e1e] after:rotate-45 after:-mt-[2px] shrink-0"
                           />
                         </>
                       )}
