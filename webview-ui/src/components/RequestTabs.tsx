@@ -13,8 +13,8 @@ export function RequestTabs({ headers, setHeaders, body, setBody }: RequestTabsP
   const [activeTab, setActiveTab] = useState<'headers' | 'body'>('headers');
 
   return (
-    <div className="flex flex-col mt-2">
-      <div className="flex gap-6">
+    <div className="flex flex-col mt-2 flex-grow overflow-hidden">
+      <div className="flex gap-6 shrink-0">
         <button 
           onClick={() => setActiveTab('headers')}
           className={`bg-transparent outline-none cursor-pointer pb-2 px-1 text-[13px] border-b-2 ${activeTab === 'headers' ? 'text-vsc-foreground font-semibold border-blue-500' : 'text-gray-400 border-transparent hover:text-vsc-foreground'}`}
@@ -29,7 +29,7 @@ export function RequestTabs({ headers, setHeaders, body, setBody }: RequestTabsP
         </button>
       </div>
       
-      <div className="mt-2">
+      <div className="mt-2 flex-grow overflow-hidden">
         {activeTab === 'headers' && (
           <HeadersPanel 
             headers={headers} 

@@ -80,7 +80,7 @@ export function BodyPanel({ body, setBody }: BodyPanelProps) {
         )}
       </div>
       
-      <div className="flex-grow min-h-[150px] border border-vsc-panel-border rounded overflow-hidden flex flex-col">
+      <div className="flex-grow min-h-0 border border-vsc-panel-border rounded overflow-hidden flex flex-col">
         {bodyType === 'none' ? (
           <div className="flex-grow flex items-center justify-center text-vsc-descriptionForeground text-[13px]">
             This request does not have a body

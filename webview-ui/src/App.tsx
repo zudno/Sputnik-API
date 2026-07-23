@@ -59,7 +59,7 @@ function App() {
       </div>
 
       <Group orientation="vertical" className="flex-grow">
-        <Panel defaultSize={45} minSize={20} className="flex flex-col">
+        <Panel defaultSize={45} minSize={30} className="flex flex-col">
           <div className="px-5 h-full overflow-hidden flex flex-col">
             <RequestTabs 
               headers={headers}
