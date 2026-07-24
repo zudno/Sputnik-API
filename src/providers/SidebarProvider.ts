@@ -57,16 +57,26 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'deleteCollection': {
-                    const collections = this.getCollections().filter(c => c.id !== data.id);
-                    await this.saveCollections(collections);
+                    const collections = this.getCollections();
+                    const colToDelete = collections.find(c => c.id === data.id);
+                    if (colToDelete) {
+                        const answer = await vscode.window.showWarningMessage(`¿Eliminar colección '${colToDelete.name}'?`, { modal: true }, 'Sí', 'No');
+                        if (answer === 'Sí') {
+                            const updated = collections.filter(c => c.id !== data.id);
+                            await this.saveCollections(updated);
+                        }
+                    }
                     break;
                 }
                 case 'renameCollection': {
                     const collections = this.getCollections();
                     const col = collections.find(c => c.id === data.id);
                     if (col) {
-                        col.name = data.name;
-                        await this.saveCollections(collections);
+                        const newName = await vscode.window.showInputBox({ prompt: 'Nuevo nombre de la colección:', value: col.name });
+                        if (newName && newName !== col.name) {
+                            col.name = newName;
+                            await this.saveCollections(collections);
+                        }
                     }
                     break;
                 }
@@ -106,8 +116,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     const collections = this.getCollections();
                     const col = collections.find(c => c.id === data.collectionId);
                     if (col) {
-                        col.requests = col.requests.filter(r => r.id !== data.requestId);
-                        await this.saveCollections(collections);
+                        const reqToDelete = col.requests.find(r => r.id === data.requestId);
+                        if (reqToDelete) {
+                            const answer = await vscode.window.showWarningMessage(`¿Eliminar petición '${reqToDelete.name}'?`, { modal: true }, 'Sí', 'No');
+                            if (answer === 'Sí') {
+                                col.requests = col.requests.filter(r => r.id !== data.requestId);
+                                await this.saveCollections(collections);
+                            }
+                        }
                     }
                     break;
                 }
@@ -117,8 +133,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     if (col) {
                         const req = col.requests.find(r => r.id === data.requestId);
                         if (req) {
-                            req.name = data.name;
-                            await this.saveCollections(collections);
+                            const newName = await vscode.window.showInputBox({ prompt: 'Nuevo nombre de la petición:', value: req.name });
+                            if (newName && newName !== req.name) {
+                                req.name = newName;
+                                await this.saveCollections(collections);
+                            }
                         }
                     }
                     break;

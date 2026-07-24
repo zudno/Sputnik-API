@@ -121,17 +121,12 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
 
   const handleDelete = (e: any) => {
     if (e?.stopPropagation) e.stopPropagation();
-    if (confirm(`¿Eliminar colección '${collection.name}'?`)) {
-      vscode.postMessage({ command: 'deleteCollection', id: collection.id });
-    }
+    vscode.postMessage({ command: 'deleteCollection', id: collection.id });
   };
 
   const handleRename = (e: any) => {
     if (e?.stopPropagation) e.stopPropagation();
-    const newName = prompt('Nuevo nombre:', collection.name);
-    if (newName && newName !== collection.name) {
-      vscode.postMessage({ command: 'renameCollection', id: collection.id, name: newName });
-    }
+    vscode.postMessage({ command: 'renameCollection', id: collection.id });
   };
 
   const handleAddRequest = (e: any) => {
@@ -236,17 +231,12 @@ function RequestItem({ request, collectionId, activeRequestId, dragState }: { re
 
   const handleDelete = (e: any) => {
     if (e?.stopPropagation) e.stopPropagation();
-    if (confirm(`¿Eliminar petición '${request.name}'?`)) {
-      vscode.postMessage({ command: 'deleteRequest', collectionId, requestId: request.id });
-    }
+    vscode.postMessage({ command: 'deleteRequest', collectionId, requestId: request.id });
   };
 
   const handleRename = (e: any) => {
     if (e?.stopPropagation) e.stopPropagation();
-    const newName = prompt('Nuevo nombre:', request.name);
-    if (newName && newName !== request.name) {
-      vscode.postMessage({ command: 'renameRequest', collectionId, requestId: request.id, name: newName });
-    }
+    vscode.postMessage({ command: 'renameRequest', collectionId, requestId: request.id });
   };
 
   const method = request.requestData?.method || 'GET';

@@ -26,6 +26,8 @@ export function Dropdown({ trigger, items, align = 'end' }: DropdownProps) {
           align={align}
           sideOffset={5} 
           className="bg-[#1c1c1c] border border-[#2b2b2b] rounded-md shadow-2xl py-1.5 z-50 min-w-[120px]"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           {items.map((item, idx) => (
             <RadixDropdownMenu.Item 
