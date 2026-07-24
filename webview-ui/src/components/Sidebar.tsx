@@ -3,9 +3,56 @@ import { vscode } from '../utils/vscode';
 import { Plus, ChevronRight, MoreHorizontal } from 'lucide-react';
 import { Dropdown } from './ui/Dropdown';
 
+interface DragState {
+  draggedRequestId: string | null;
+  dragOverInfo: { id: string, position: 'top' | 'bottom' | 'inside' } | null;
+  handleDragStart: (id: string) => void;
+  handleDragEnd: () => void;
+  handleDragOver: (id: string, position: 'top' | 'bottom' | 'inside') => void;
+  handleDrop: (targetId: string, position: 'top' | 'bottom' | 'inside', targetCollectionId: string) => void;
+}
+
 export function Sidebar() {
   const [collections, setCollections] = useState<any[]>([]);
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const [draggedRequestId, setDraggedRequestId] = useState<string | null>(null);
+  const [dragOverInfo, setDragOverInfo] = useState<{ id: string, position: 'top' | 'bottom' | 'inside' } | null>(null);
+
+  const handleDragStart = (id: string) => setDraggedRequestId(id);
+  const handleDragEnd = () => {
+    setDraggedRequestId(null);
+    setDragOverInfo(null);
+  };
+  const handleDragOver = (id: string, position: 'top' | 'bottom' | 'inside') => {
+    setDragOverInfo({ id, position });
+  };
+  const handleDrop = (targetId: string, position: 'top' | 'bottom' | 'inside', targetCollectionId: string) => {
+    if (draggedRequestId && draggedRequestId !== targetId) {
+      let targetIndex = undefined;
+      const targetCol = collections.find(c => c.id === targetCollectionId);
+      if (targetCol && position !== 'inside') {
+          const idx = targetCol.requests.findIndex((r: any) => r.id === targetId);
+          if (idx !== -1) {
+              targetIndex = position === 'top' ? idx : idx + 1;
+          }
+      }
+      let sourceCollectionId = '';
+      for (const col of collections) {
+          if (col.requests.some((r: any) => r.id === draggedRequestId)) {
+              sourceCollectionId = col.id;
+              break;
+          }
+      }
+      vscode.postMessage({ 
+        command: 'moveRequest', 
+        requestId: draggedRequestId, 
+        sourceCollectionId, 
+        targetCollectionId, 
+        targetIndex 
+      });
+    }
+    handleDragEnd();
+  };
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -46,7 +93,12 @@ export function Sidebar() {
       </div>
       <div className="flex-1 overflow-y-auto">
         {collections.map(c => (
-          <CollectionItem key={c.id} collection={c} activeRequestId={activeRequestId} />
+          <CollectionItem 
+            key={c.id} 
+            collection={c} 
+            activeRequestId={activeRequestId} 
+            dragState={{ draggedRequestId, dragOverInfo, handleDragStart, handleDragEnd, handleDragOver, handleDrop }} 
+          />
         ))}
         {collections.length === 0 && (
           <div className="p-4 text-center text-gray-500">
@@ -58,7 +110,7 @@ export function Sidebar() {
   );
 }
 
-function CollectionItem({ collection, activeRequestId }: { collection: any, activeRequestId?: string | null }) {
+function CollectionItem({ collection, activeRequestId, dragState }: { collection: any, activeRequestId?: string | null, dragState: DragState }) {
   const [expanded, setExpanded] = useState(collection.expanded ?? true);
 
   const toggleExpanded = () => {
@@ -130,10 +182,14 @@ function CollectionItem({ collection, activeRequestId }: { collection: any, acti
           <div className="absolute left-[20px] top-0 bottom-0 w-[1px] bg-[#3a3d3e] z-10 pointer-events-none"></div>
           {collection.requests && collection.requests.length > 0 ? (
             collection.requests.map((r: any) => (
-               <RequestItem key={r.id} request={r} collectionId={collection.id} activeRequestId={activeRequestId} />
+               <RequestItem key={r.id} request={r} collectionId={collection.id} activeRequestId={activeRequestId} dragState={dragState} />
             ))
           ) : (
-            <div className="flex flex-col py-2 pl-[36px] pr-3 text-gray-400">
+            <div 
+              className={`flex flex-col py-2 pl-[36px] pr-3 text-gray-400 ${dragState.dragOverInfo?.id === collection.id ? 'bg-[#2a2d2e]' : ''}`}
+              onDragOver={(e) => { e.preventDefault(); dragState.handleDragOver(collection.id, 'inside'); }}
+              onDrop={(e) => { e.preventDefault(); dragState.handleDrop(collection.id, 'inside', collection.id); }}
+            >
               <span className="mb-1">This collection is empty</span>
               <span>
                 <button 
@@ -151,7 +207,7 @@ function CollectionItem({ collection, activeRequestId }: { collection: any, acti
   );
 }
 
-function RequestItem({ request, collectionId, activeRequestId }: { request: any, collectionId: string, activeRequestId?: string | null }) {
+function RequestItem({ request, collectionId, activeRequestId, dragState }: { request: any, collectionId: string, activeRequestId?: string | null, dragState: DragState }) {
   const isActive = request.id === activeRequestId;
 
   const getMethodColor = (m: string) => {
@@ -197,9 +253,34 @@ function RequestItem({ request, collectionId, activeRequestId }: { request: any,
 
   return (
     <div 
-      className={`flex justify-between items-center py-1 pl-[36px] pr-3 group cursor-pointer transition-colors relative z-0 w-full ${isActive ? 'bg-[#37373d]' : 'hover:bg-[#2a2d2e]'}`}
+      draggable
+      onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = 'move';
+          dragState.handleDragStart(request.id);
+      }}
+      onDragEnd={() => dragState.handleDragEnd()}
+      onDragOver={(e) => {
+          e.preventDefault();
+          const rect = e.currentTarget.getBoundingClientRect();
+          const y = e.clientY - rect.top;
+          const position = y < rect.height / 2 ? 'top' : 'bottom';
+          dragState.handleDragOver(request.id, position);
+      }}
+      onDrop={(e) => {
+          e.preventDefault();
+          if (dragState.dragOverInfo) {
+              dragState.handleDrop(request.id, dragState.dragOverInfo.position, collectionId);
+          }
+      }}
+      className={`flex justify-between items-center py-1 pl-[36px] pr-3 group cursor-pointer transition-colors relative z-0 w-full ${isActive ? 'bg-[#37373d]' : 'hover:bg-[#2a2d2e]'} ${dragState.draggedRequestId === request.id ? 'opacity-50' : ''}`}
       onClick={handleOpen}
     >
+      {dragState.dragOverInfo?.id === request.id && dragState.dragOverInfo?.position === 'top' && (
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-orange-500 z-10 pointer-events-none" />
+      )}
+      {dragState.dragOverInfo?.id === request.id && dragState.dragOverInfo?.position === 'bottom' && (
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500 z-10 pointer-events-none" />
+      )}
       <div className="flex items-center gap-1 overflow-hidden whitespace-nowrap">
         <span className={`text-[9px] font-semibold w-[26px] ${getMethodColor(method)}`}>
           {formatMethod(method)}

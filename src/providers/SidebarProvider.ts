@@ -123,6 +123,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
                     break;
                 }
+                case 'moveRequest': {
+                    const collections = this.getCollections();
+                    const sourceCol = collections.find(c => c.id === data.sourceCollectionId);
+                    const targetCol = collections.find(c => c.id === data.targetCollectionId);
+                    
+                    if (sourceCol && targetCol) {
+                        const reqIndex = sourceCol.requests.findIndex(r => r.id === data.requestId);
+                        if (reqIndex !== -1) {
+                            const [req] = sourceCol.requests.splice(reqIndex, 1);
+                            if (data.targetIndex !== undefined) {
+                                targetCol.requests.splice(data.targetIndex, 0, req);
+                            } else {
+                                targetCol.requests.push(req);
+                            }
+                            await this.saveCollections(collections);
+                        }
+                    }
+                    break;
+                }
                 case 'openRequest': {
                     const collections = this.getCollections();
                     const col = collections.find(c => c.id === data.collectionId);
