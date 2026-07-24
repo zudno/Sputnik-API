@@ -5,12 +5,18 @@ import { Dropdown } from './ui/Dropdown';
 
 export function Sidebar() {
   const [collections, setCollections] = useState<any[]>([]);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
       if (message.command === 'collectionsUpdated') {
         setCollections(message.collections);
+        if (message.activeRequestId !== undefined) {
+          setActiveRequestId(message.activeRequestId);
+        }
+      } else if (message.command === 'setActiveRequest') {
+        setActiveRequestId(message.id);
       }
     };
 
@@ -23,10 +29,7 @@ export function Sidebar() {
   }, []);
 
   const handleAddCollection = () => {
-    const name = prompt('Nombre de la nueva colección');
-    if (name) {
-      vscode.postMessage({ command: 'addCollection', name });
-    }
+    vscode.postMessage({ command: 'addCollection', name: 'New Collection' });
   };
 
   return (
@@ -43,7 +46,7 @@ export function Sidebar() {
       </div>
       <div className="flex-1 overflow-y-auto">
         {collections.map(c => (
-          <CollectionItem key={c.id} collection={c} />
+          <CollectionItem key={c.id} collection={c} activeRequestId={activeRequestId} />
         ))}
         {collections.length === 0 && (
           <div className="p-4 text-center text-gray-500">
@@ -55,8 +58,14 @@ export function Sidebar() {
   );
 }
 
-function CollectionItem({ collection }: { collection: any }) {
-  const [expanded, setExpanded] = useState(true);
+function CollectionItem({ collection, activeRequestId }: { collection: any, activeRequestId?: string | null }) {
+  const [expanded, setExpanded] = useState(collection.expanded ?? true);
+
+  const toggleExpanded = () => {
+    const newExpanded = !expanded;
+    setExpanded(newExpanded);
+    vscode.postMessage({ command: 'toggleCollectionExpanded', id: collection.id, expanded: newExpanded });
+  };
 
   const handleDelete = (e: any) => {
     if (e?.stopPropagation) e.stopPropagation();
@@ -75,24 +84,28 @@ function CollectionItem({ collection }: { collection: any }) {
 
   const handleAddRequest = (e: any) => {
     if (e?.stopPropagation) e.stopPropagation();
-    const name = prompt('Nombre de la petición:');
-    if (name) {
-      vscode.postMessage({ command: 'addRequest', collectionId: collection.id, name });
-    }
+    vscode.postMessage({ command: 'addRequest', collectionId: collection.id, name: 'New Request' });
   };
 
   return (
     <div className="flex flex-col">
       <div 
         className="flex justify-between items-center py-1 px-3 hover:bg-[#2a2d2e] group cursor-pointer transition-colors" 
-        onClick={() => setExpanded(!expanded)}
+        onClick={toggleExpanded}
       >
         <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
           <ChevronRight size={14} className={`transition-transform ${expanded ? 'rotate-90' : ''}`} />
           <span className="truncate">{collection.name}</span>
         </div>
         
-        <div className="flex items-center">
+        <div className="flex items-center gap-0.5">
+          <button 
+            onClick={handleAddRequest}
+            title="Add Request"
+            className="w-6 h-6 flex items-center justify-center hover:bg-[#3c3e40] rounded text-gray-400 hover:text-white invisible group-hover:visible transition-colors outline-none border-none bg-transparent cursor-pointer"
+          >
+            <Plus size={16} />
+          </button>
           <Dropdown
             align="end"
             trigger={
@@ -104,7 +117,6 @@ function CollectionItem({ collection }: { collection: any }) {
               </button>
             }
             items={[
-              { label: 'Add Request', onClick: handleAddRequest },
               { label: 'Rename', onClick: handleRename },
               { label: 'Delete', onClick: handleDelete, danger: true }
             ]}
@@ -116,17 +128,32 @@ function CollectionItem({ collection }: { collection: any }) {
         <div className="flex flex-col relative">
           {/* Vertical guideline */}
           <div className="absolute left-[20px] top-0 bottom-0 w-[1px] bg-[#3a3d3e] z-10 pointer-events-none"></div>
-          {collection.requests.map((r: any) => (
-             <RequestItem key={r.id} request={r} collectionId={collection.id} />
-          ))}
+          {collection.requests && collection.requests.length > 0 ? (
+            collection.requests.map((r: any) => (
+               <RequestItem key={r.id} request={r} collectionId={collection.id} activeRequestId={activeRequestId} />
+            ))
+          ) : (
+            <div className="flex flex-col py-2 pl-[36px] pr-3 text-gray-400">
+              <span className="mb-1">This collection is empty</span>
+              <span>
+                <button 
+                  onClick={handleAddRequest}
+                  className="text-blue-400 hover:text-blue-300 cursor-pointer border-none bg-transparent p-0 m-0 text-[13px] outline-none hover:underline"
+                >
+                  Add a request
+                </button> to start working
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function RequestItem({ request, collectionId }: { request: any, collectionId: string }) {
-  
+function RequestItem({ request, collectionId, activeRequestId }: { request: any, collectionId: string, activeRequestId?: string | null }) {
+  const isActive = request.id === activeRequestId;
+
   const getMethodColor = (m: string) => {
     switch(m.toUpperCase()) {
       case 'GET': return 'text-[#0cbb52]';
@@ -170,7 +197,7 @@ function RequestItem({ request, collectionId }: { request: any, collectionId: st
 
   return (
     <div 
-      className="flex justify-between items-center py-1 pl-[36px] pr-3 hover:bg-[#2a2d2e] group cursor-pointer transition-colors relative z-0 w-full"
+      className={`flex justify-between items-center py-1 pl-[36px] pr-3 group cursor-pointer transition-colors relative z-0 w-full ${isActive ? 'bg-[#37373d]' : 'hover:bg-[#2a2d2e]'}`}
       onClick={handleOpen}
     >
       <div className="flex items-center gap-1 overflow-hidden whitespace-nowrap">

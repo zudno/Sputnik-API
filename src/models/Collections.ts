@@ -16,4 +16,5 @@ export interface Collection {
     id: string;
     name: string;
     requests: SavedRequest[];
+    expanded?: boolean;
 }

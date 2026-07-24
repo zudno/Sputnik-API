@@ -6,6 +6,7 @@ import { RestClientPanel } from '../panels/RestClientPanel';
 export class SidebarProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
     private readonly STATE_KEY = 'sputnik_collections';
+    private readonly ACTIVE_REQ_KEY = 'sputnik_active_request';
 
     constructor(private context: vscode.ExtensionContext) {}
 
@@ -25,6 +26,19 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const styleUri = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview-ui', 'build', 'assets', 'index.css'));
 
         webviewView.webview.html = this.getHtmlContent(scriptUri, styleUri);
+
+        const activeReqId = this.context.globalState.get<string | null>(this.ACTIVE_REQ_KEY, null);
+        if (activeReqId) {
+            const collections = this.getCollections();
+            for (const col of collections) {
+                const req = col.requests.find(r => r.id === activeReqId);
+                if (req) {
+                    RestClientPanel.render(this.context);
+                    RestClientPanel.loadRequest(req.requestData, req.name, col.id, col.name, req.id);
+                    break;
+                }
+            }
+        }
 
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.command) {
@@ -60,7 +74,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     const collections = this.getCollections();
                     const col = collections.find(c => c.id === data.collectionId);
                     if (col) {
-                        col.requests.push({
+                        const newReq = {
                             id: crypto.randomUUID(),
                             name: data.name,
                             requestData: {
@@ -69,7 +83,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                 headers: '',
                                 body: ''
                             }
-                        });
+                        };
+                        col.requests.push(newReq);
+                        await this.saveCollections(collections);
+                        RestClientPanel.render(this.context);
+                        RestClientPanel.loadRequest(newReq.requestData, newReq.name, col.id, col.name, newReq.id);
+                        await this.context.globalState.update(this.ACTIVE_REQ_KEY, newReq.id);
+                        this._view?.webview.postMessage({ command: 'setActiveRequest', id: newReq.id });
+                    }
+                    break;
+                }
+                case 'toggleCollectionExpanded': {
+                    const collections = this.getCollections();
+                    const col = collections.find(c => c.id === data.id);
+                    if (col) {
+                        col.expanded = data.expanded;
                         await this.saveCollections(collections);
                     }
                     break;
@@ -103,6 +131,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         if (req) {
                             RestClientPanel.render(this.context);
                             RestClientPanel.loadRequest(req.requestData, req.name, col.id, col.name, req.id);
+                            await this.context.globalState.update(this.ACTIVE_REQ_KEY, req.id);
+                            this._view?.webview.postMessage({ command: 'setActiveRequest', id: req.id });
                         }
                     }
                     break;
@@ -149,7 +179,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         if (this._view) {
             this._view.webview.postMessage({
                 command: 'collectionsUpdated',
-                collections: this.getCollections()
+                collections: this.getCollections(),
+                activeRequestId: this.context.globalState.get<string | null>(this.ACTIVE_REQ_KEY, null)
             });
         }
     }
