@@ -1,6 +1,7 @@
 import Editor from '@monaco-editor/react';
 import { useState } from 'react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { ChevronDown } from 'lucide-react';
+import { Dropdown } from './ui/Dropdown';
 
 interface BodyPanelProps {
   body: string;
@@ -53,30 +54,19 @@ export function BodyPanel({ body, setBody }: BodyPanelProps) {
         </div>
         
         {bodyType === 'raw' && (
-          <DropdownMenu.Root modal={false}>
-            <DropdownMenu.Trigger asChild>
+          <Dropdown 
+            align="start"
+            trigger={
               <button className="flex items-center gap-1 text-blue-500 font-semibold text-[13px] hover:text-blue-400 cursor-pointer bg-transparent border-none outline-none p-0">
                 {selectedLabel}
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <ChevronDown size={14} strokeWidth={2.5} />
               </button>
-            </DropdownMenu.Trigger>
-            
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content align="start" sideOffset={5} className="bg-[#1c1c1c] border border-[#2b2b2b] rounded-md shadow-2xl py-1.5 z-50 w-[180px]">
-                {languages.map((lang) => (
-                  <DropdownMenu.Item 
-                    key={lang.value}
-                    onSelect={() => setLanguage(lang.value)}
-                    className="px-3 py-1.5 mx-1.5 my-0.5 rounded-md cursor-pointer text-[13px] font-sans outline-none text-[#cccccc] focus:bg-[#333333] focus:text-white transition-colors"
-                  >
-                    {lang.label}
-                  </DropdownMenu.Item>
-                ))}
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
+            }
+            items={languages.map(lang => ({
+              label: lang.label,
+              onClick: () => setLanguage(lang.value)
+            }))}
+          />
         )}
       </div>
       

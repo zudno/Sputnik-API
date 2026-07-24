@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Save } from "lucide-react";
 
 interface RequestPanelProps {
   method: string;
@@ -7,9 +7,10 @@ interface RequestPanelProps {
   setUrl: (url: string) => void;
   loading: boolean;
   onSend: () => void;
+  onSave?: () => void;
 }
 
-export function RequestPanel({ method, setMethod, url, setUrl, loading, onSend }: RequestPanelProps) {
+export function RequestPanel({ method, setMethod, url, setUrl, loading, onSend, onSave }: RequestPanelProps) {
   const getMethodColor = (m: string) => {
     switch(m) {
       case 'GET': return 'text-vsc-http-get';
@@ -46,13 +47,24 @@ export function RequestPanel({ method, setMethod, url, setUrl, loading, onSend }
           placeholder="https://api.example.com/data" 
         />
       </div>
-      <button 
-        onClick={onSend}
-        disabled={loading}
-        className="bg-vsc-postman-blue text-white py-3 px-6 font-bold hover:bg-vsc-postman-hover border-none cursor-pointer rounded transition-colors disabled:opacity-50"
-      >
-        {loading ? 'Sending...' : 'Send'}
-      </button>
+      <div className="flex bg-[#2a2d2e] rounded overflow-hidden">
+        <button 
+          onClick={onSend}
+          disabled={loading}
+          className="bg-vsc-postman-blue text-white py-3 px-6 font-bold hover:bg-vsc-postman-hover border-none cursor-pointer transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Sending...' : 'Send'}
+        </button>
+        {onSave && (
+          <button 
+            onClick={onSave}
+            className="bg-vsc-postman-blue border-l border-[#1a60ad] text-white py-3 px-3 hover:bg-vsc-postman-hover cursor-pointer transition-colors flex items-center justify-center"
+            title="Save Request"
+          >
+            <Save size={16} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

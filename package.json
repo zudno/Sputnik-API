@@ -20,7 +20,7 @@
         "commands": [
             {
                 "command": "sputnik-api.open",
-                "title": "Sputnik API: Open"
+                "title": "New Request"
             }
         ],
         "viewsContainers": {
@@ -35,12 +35,14 @@
         "views": {
             "sputnik-api-explorer": [
                 {
+                    "type": "webview",
                     "id": "sputnik-api-view",
                     "name": "Sputnik API",
                     "icon": "media/icon.svg"
                 }
             ]
         }
+
     },
     "scripts": {
         "vscode:prepublish": "npm run package",

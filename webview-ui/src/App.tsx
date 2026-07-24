@@ -3,12 +3,12 @@ import { Panel, Group, Separator } from "react-resizable-panels";
 import { RequestPanel } from "./components/RequestPanel";
 import { RequestTabs } from "./components/RequestTabs";
 import { ResponsePanel } from "./components/ResponsePanel";
+import { Sidebar } from "./components/Sidebar";
+import { Breadcrumb } from "./components/Breadcrumb";
 import type { HeaderItem } from "./types";
+import { vscode } from "./utils/vscode";
 
-// @ts-ignore
-const vscode = acquireVsCodeApi();
-
-function App() {
+function MainPanel() {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("https://jsonplaceholder.typicode.com/todos/1");
   const [headers, setHeaders] = useState<HeaderItem[]>([
@@ -18,6 +18,8 @@ function App() {
   
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  
+  const [requestMeta, setRequestMeta] = useState<{name?: string, collectionName?: string, collectionId?: string, requestId?: string}>({});
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -25,6 +27,31 @@ function App() {
       if (message.command === 'response') {
         setLoading(false);
         setResponse(message.data);
+      } else if (message.command === 'loadRequest') {
+        setRequestMeta(message.meta || {});
+        const req = message.data;
+        setMethod(req.method || 'GET');
+        setUrl(req.url || '');
+        setBody(req.body || '');
+        
+        const parsedHeaders: HeaderItem[] = [];
+        if (req.headers) {
+          req.headers.split('\\n').forEach((line: string) => {
+            const sep = line.indexOf(':');
+            if (sep !== -1) {
+              parsedHeaders.push({
+                id: crypto.randomUUID(),
+                key: line.substring(0, sep).trim(),
+                value: line.substring(sep + 1).trim(),
+                description: '',
+                enabled: true
+              });
+            }
+          });
+        }
+        parsedHeaders.push({ id: crypto.randomUUID(), key: '', value: '', description: '', enabled: true });
+        setHeaders(parsedHeaders);
+        setResponse(null); // Clear previous response when loading
       }
     };
     
@@ -53,10 +80,27 @@ function App() {
     });
   };
 
+  const handleSave = () => {
+    const headersString = headers
+      .filter(h => h.enabled && h.key.trim() !== '')
+      .map(h => `${h.key.trim()}: ${h.value}`)
+      .join('\\n');
+
+    vscode.postMessage({
+      command: 'saveRequest',
+      data: {
+        method,
+        url,
+        headers: headersString,
+        body
+      }
+    });
+  };
+
   return (
     <div className="flex flex-col h-screen overflow-hidden text-vsc-foreground bg-vsc-editor-bg">
       <div className="p-5 pb-2 flex-shrink-0 flex flex-col gap-4">
-        <h2 className="text-xl font-bold">Sputnik API</h2>
+        <Breadcrumb requestMeta={requestMeta} setRequestMeta={setRequestMeta} />
         
         <RequestPanel 
           method={method} 
@@ -65,6 +109,7 @@ function App() {
           setUrl={setUrl} 
           loading={loading} 
           onSend={handleSend} 
+          onSave={handleSave}
         />
       </div>
 
@@ -94,6 +139,17 @@ function App() {
       </Group>
     </div>
   );
+}
+
+function App() {
+  // @ts-ignore
+  const mode = window.vscodeData?.mode || 'panel';
+  
+  if (mode === 'sidebar') {
+    return <Sidebar />;
+  }
+  
+  return <MainPanel />;
 }
 
 export default App;
