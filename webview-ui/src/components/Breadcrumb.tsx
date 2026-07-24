@@ -17,12 +17,20 @@ interface BreadcrumbProps {
 
 export function Breadcrumb({ requestMeta, setRequestMeta }: BreadcrumbProps) {
   const handleRenameRequest = () => {
-    if (requestMeta.collectionId && requestMeta.requestId && requestMeta.name) {
+    let finalName = requestMeta.name?.trim();
+    if (!finalName) {
+      finalName = 'New Request';
+      setRequestMeta(prev => ({ ...prev, name: finalName }));
+    } else if (finalName !== requestMeta.name) {
+      setRequestMeta(prev => ({ ...prev, name: finalName }));
+    }
+
+    if (requestMeta.collectionId && requestMeta.requestId) {
       vscode.postMessage({
         command: 'renameRequestFromPanel',
         collectionId: requestMeta.collectionId,
         requestId: requestMeta.requestId,
-        name: requestMeta.name
+        name: finalName
       });
     }
   };
@@ -32,12 +40,12 @@ export function Breadcrumb({ requestMeta, setRequestMeta }: BreadcrumbProps) {
       {requestMeta.collectionName ? (
         <>
           <span className="text-blue-400 font-semibold mr-2">HTTP</span>
-          <button className="text-neutral-500 font-normal hover:bg-[#2a2d2e] hover:text-gray-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors outline-none">
+          <button className="text-neutral-500 font-normal hover:bg-[#2a2d2e] hover:text-gray-200 px-1.5 py-0.5 rounded cursor-pointer outline-none">
             {requestMeta.collectionName}
           </button>
-          <span className="text-neutral-500 font-normal mx-1">/</span>
+          <span className="text-neutral-500 font-normal">/</span>
           <div className="inline-grid items-center">
-            <span className="invisible whitespace-pre px-1.5 py-0.5 font-semibold col-start-1 row-start-1 pointer-events-none min-w-[20px] border-2 border-transparent">
+            <span className="invisible whitespace-pre px-1.5 py-0.5 font-semibold col-start-1 row-start-1 pointer-events-none min-w-[1ch] border-2 border-transparent">
               {requestMeta.name || ''}
             </span>
             <input 
@@ -45,12 +53,13 @@ export function Breadcrumb({ requestMeta, setRequestMeta }: BreadcrumbProps) {
               size={1}
               onChange={e => setRequestMeta({...requestMeta, name: e.target.value})}
               onBlur={handleRenameRequest}
+              onFocus={e => e.target.select()}
               onKeyDown={e => {
                 if (e.key === 'Enter') {
                   e.currentTarget.blur();
                 }
               }}
-              className="bg-transparent border-2 border-transparent focus:border-[#007fd4] text-white outline-none cursor-text hover:bg-[#2a2d2e] px-1.5 py-0.5 rounded transition-all font-semibold w-full min-w-0 col-start-1 row-start-1 m-0 leading-tight" 
+              className="bg-transparent border-2 border-transparent focus:border-[#007fd4] focus:bg-transparent text-white outline-none cursor-text hover:bg-[#2a2d2e] px-1.5 py-0.5 rounded font-semibold w-full min-w-0 col-start-1 row-start-1 m-0 leading-tight" 
             />
           </div>
         </>
