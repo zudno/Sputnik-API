@@ -43,8 +43,8 @@ export function RequestPanel({ method, setMethod, url, setUrl, loading, onSend, 
           type="text" 
           value={url}
           onChange={e => setUrl(e.target.value)}
-          className="bg-transparent text-vsc-input-foreground flex-grow font-mono px-3 py-3 outline-none border-none w-full" 
-          placeholder="https://api.example.com/data" 
+          className="bg-transparent text-white placeholder-neutral-500 flex-grow font-sans px-3 py-3 outline-none border-none w-full" 
+          placeholder="Enter URL or paste text" 
         />
       </div>
       <div className="flex bg-[#2a2d2e] rounded overflow-hidden">
