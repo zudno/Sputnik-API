@@ -13,6 +13,7 @@ interface DragState {
 }
 
 export function Sidebar() {
+  const [activeTab, setActiveTab] = useState<'collections' | 'environments'>('collections');
   const [collections, setCollections] = useState<any[]>([]);
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [draggedRequestId, setDraggedRequestId] = useState<string | null>(null);
@@ -81,31 +82,79 @@ export function Sidebar() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden text-[#cccccc] text-[13px] select-none">
-      <div className="flex justify-between items-center px-4 py-3 font-semibold text-xs border-b border-[#2b2d2e]">
-        <span>COLLECTIONS</span>
-        <button 
-          onClick={handleAddCollection} 
-          className="hover:text-white cursor-pointer w-6 h-6 flex items-center justify-center rounded hover:bg-[#2a2d2e]"
-          title="New Collection"
+      <div className="flex border-b border-[#2b2d2e] shrink-0">
+        <button
+          onClick={() => setActiveTab('collections')}
+          className={`flex-1 py-2 text-xs font-semibold text-center cursor-pointer outline-none bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 transition-colors ${activeTab === 'collections' ? 'text-white border-[#0cbb52]' : 'text-gray-400 hover:text-white border-transparent'}`}
         >
-          <Plus size={16} />
+          Collections
+        </button>
+        <button
+          onClick={() => setActiveTab('environments')}
+          className={`flex-1 py-2 text-xs font-semibold text-center cursor-pointer outline-none bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 transition-colors ${activeTab === 'environments' ? 'text-white border-[#0cbb52]' : 'text-gray-400 hover:text-white border-transparent'}`}
+        >
+          Environments
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto">
-        {collections.map(c => (
-          <CollectionItem 
-            key={c.id} 
-            collection={c} 
-            activeRequestId={activeRequestId} 
-            dragState={{ draggedRequestId, dragOverInfo, handleDragStart, handleDragEnd, handleDragOver, handleDrop }} 
-          />
-        ))}
-        {collections.length === 0 && (
-          <div className="p-4 text-center text-gray-500">
-            No collections yet. Click + to create one.
+
+      {activeTab === 'collections' ? (
+        <>
+          <div className="flex justify-between items-center px-4 py-2 font-semibold text-xs border-b border-[#2b2d2e] shrink-0">
+            <span>COLLECTIONS</span>
+            <button 
+              onClick={handleAddCollection} 
+              className="hover:text-white cursor-pointer w-6 h-6 flex items-center justify-center rounded hover:bg-[#2a2d2e] bg-transparent border-none text-[#cccccc]"
+              title="New Collection"
+            >
+              <Plus size={16} />
+            </button>
           </div>
-        )}
-      </div>
+          <div className="flex-1 overflow-y-auto">
+            {collections.map(c => (
+              <CollectionItem 
+                key={c.id} 
+                collection={c} 
+                activeRequestId={activeRequestId} 
+                dragState={{ draggedRequestId, dragOverInfo, handleDragStart, handleDragEnd, handleDragOver, handleDrop }} 
+              />
+            ))}
+            {collections.length === 0 && (
+              <div className="p-4 text-center text-gray-500">
+                No collections yet. Click + to create one.
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex justify-between items-center px-4 py-2 font-semibold text-xs border-b border-[#2b2d2e] shrink-0">
+            <span>ENVIRONMENTS</span>
+            <button 
+              onClick={() => vscode.postMessage({ command: 'addEnvironment', name: 'New Environment' })} 
+              className="hover:text-white cursor-pointer w-6 h-6 flex items-center justify-center rounded hover:bg-[#2a2d2e] bg-transparent border-none text-[#cccccc]"
+              title="New Environment"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <div 
+              className="flex justify-between items-center py-2 px-4 hover:bg-[#2a2d2e] cursor-pointer transition-colors"
+              onClick={() => vscode.postMessage({ command: 'openEnvironment', name: 'Globals' })}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-[#cccccc]">Globals</span>
+              </div>
+            </div>
+            
+            <div className="h-[1px] bg-[#2b2d2e] mx-4 my-1"></div>
+
+            <div className="p-4 text-center text-gray-500">
+              No environments yet. Click + to create one.
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -5,21 +5,48 @@ import { RequestTabs } from "./components/RequestTabs";
 import { ResponsePanel } from "./components/ResponsePanel";
 import { Sidebar } from "./components/Sidebar";
 import { Breadcrumb } from "./components/Breadcrumb";
+import { EnvironmentPanel } from "./components/EnvironmentPanel";
 import type { HeaderItem } from "./types";
 import { vscode } from "./utils/vscode";
 
+const parseHeaders = (headersStr: string) => {
+  const parsedHeaders: HeaderItem[] = [];
+  if (headersStr) {
+    headersStr.split('\n').forEach((line: string) => {
+      const sep = line.indexOf(':');
+      if (sep !== -1) {
+        parsedHeaders.push({
+          id: crypto.randomUUID(),
+          key: line.substring(0, sep).trim(),
+          value: line.substring(sep + 1).trim(),
+          description: '',
+          enabled: true
+        });
+      }
+    });
+  }
+  parsedHeaders.push({ id: crypto.randomUUID(), key: '', value: '', description: '', enabled: true });
+  return parsedHeaders;
+};
+
 function MainPanel() {
-  const [method, setMethod] = useState("GET");
-  const [url, setUrl] = useState("https://jsonplaceholder.typicode.com/todos/1");
-  const [headers, setHeaders] = useState<HeaderItem[]>([
-    { id: '1', key: '', value: '', description: '', enabled: true }
-  ]);
-  const [body, setBody] = useState("");
+  // @ts-ignore
+  const vscodeData = window.vscodeData || {};
+  const initialView = vscodeData.view || 'request';
+  const initialData = vscodeData.initialData || {};
+
+  const [view, setView] = useState<'request' | 'environment'>(initialView);
+  const [environmentName, setEnvironmentName] = useState<string>('Globals');
+  
+  const [method, setMethod] = useState(initialData.requestData?.method || "GET");
+  const [url, setUrl] = useState(initialData.requestData?.url || "");
+  const [headers, setHeaders] = useState<HeaderItem[]>(() => parseHeaders(initialData.requestData?.headers || ""));
+  const [body, setBody] = useState(initialData.requestData?.body || "");
   
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   
-  const [requestMeta, setRequestMeta] = useState<{name?: string, collectionName?: string, collectionId?: string, requestId?: string}>({});
+  const [requestMeta, setRequestMeta] = useState<{name?: string, collectionName?: string, collectionId?: string, requestId?: string}>(initialData.meta || {});
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -27,30 +54,17 @@ function MainPanel() {
       if (message.command === 'response') {
         setLoading(false);
         setResponse(message.data);
+      } else if (message.command === 'loadEnvironment') {
+        setView('environment');
+        setEnvironmentName(message.data?.name || 'Globals');
       } else if (message.command === 'loadRequest') {
+        setView('request');
         setRequestMeta(message.meta || {});
         const req = message.data;
         setMethod(req.method || 'GET');
         setUrl(req.url || '');
         setBody(req.body || '');
-        
-        const parsedHeaders: HeaderItem[] = [];
-        if (req.headers) {
-          req.headers.split('\\n').forEach((line: string) => {
-            const sep = line.indexOf(':');
-            if (sep !== -1) {
-              parsedHeaders.push({
-                id: crypto.randomUUID(),
-                key: line.substring(0, sep).trim(),
-                value: line.substring(sep + 1).trim(),
-                description: '',
-                enabled: true
-              });
-            }
-          });
-        }
-        parsedHeaders.push({ id: crypto.randomUUID(), key: '', value: '', description: '', enabled: true });
-        setHeaders(parsedHeaders);
+        setHeaders(parseHeaders(req.headers || ''));
         setResponse(null); // Clear previous response when loading
       }
     };
@@ -96,6 +110,10 @@ function MainPanel() {
       }
     });
   };
+
+  if (view === 'environment') {
+    return <EnvironmentPanel environmentName={environmentName} />;
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden text-vsc-foreground bg-vsc-editor-bg">

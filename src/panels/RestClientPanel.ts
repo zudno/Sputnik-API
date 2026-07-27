@@ -31,6 +31,16 @@ export class RestClientPanel {
             });
         }
     }
+
+    public static loadEnvironment(environmentId: string, name: string) {
+        const panel = this.panels.get(environmentId);
+        if (panel) {
+            panel.webview.postMessage({
+                command: 'loadEnvironment',
+                data: { name }
+            });
+        }
+    }
     
     /**
      * Instancia un nuevo panel o lo muestra si ya existe para ese request.
@@ -38,7 +48,7 @@ export class RestClientPanel {
      * @param requestId ID del request
      * @param requestName Nombre del request para el título del tab
      */
-    public static render(context: vscode.ExtensionContext, requestId: string = 'default', requestName: string = 'Sputnik API'): void {
+    public static render(context: vscode.ExtensionContext, requestId: string = 'default', requestName: string = 'Sputnik API', initialView: string = 'request', initialData?: any): void {
         let panel = this.panels.get(requestId);
 
         if (panel) {
@@ -72,7 +82,7 @@ export class RestClientPanel {
         );
 
         // Define the HTML for the Webview
-        panel.webview.html = this.getHtmlContent(scriptUri, styleUri);
+        panel.webview.html = this.getHtmlContent(scriptUri, styleUri, initialView, initialData);
 
         // Escuchar mensajes provenientes del Webview
         panel.webview.onDidReceiveMessage(
@@ -126,6 +136,8 @@ export class RestClientPanel {
                             }
                         }
                     }
+                } else if (message.command === 'saveEnvironment') {
+                    vscode.window.showInformationMessage(`Entorno '${message.data.name}' guardado correctamente.`);
                 }
             },
             undefined,
@@ -139,7 +151,7 @@ export class RestClientPanel {
      * @param styleUri La URI segura para cargar el archivo CSS.
      * @returns Un string con el documento HTML completo.
      */
-    private static getHtmlContent(scriptUri: vscode.Uri, styleUri: vscode.Uri): string {
+    private static getHtmlContent(scriptUri: vscode.Uri, styleUri: vscode.Uri, initialView: string = 'request', initialData?: any): string {
         return `<!DOCTYPE html>
         <html lang="es">
         <head>
@@ -147,6 +159,9 @@ export class RestClientPanel {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Sputnik API</title>
             <link href="${styleUri}" rel="stylesheet">
+            <script>
+                window.vscodeData = { mode: 'panel', view: '${initialView}', initialData: ${initialData ? JSON.stringify(initialData) : 'null'} };
+            </script>
         </head>
         <body>
             <div id="root"></div>

@@ -33,7 +33,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             for (const col of collections) {
                 const req = col.requests.find(r => r.id === activeReqId);
                 if (req) {
-                    RestClientPanel.render(this.context, req.id, req.name);
+                    const initialData = { requestData: req.requestData, meta: { name: req.name, collectionId: col.id, collectionName: col.name, requestId: req.id } };
+                    RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
                     RestClientPanel.loadRequest(req.requestData, req.name, col.id, col.name, req.id);
                     break;
                 }
@@ -96,7 +97,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         };
                         col.requests.push(newReq);
                         await this.saveCollections(collections);
-                        RestClientPanel.render(this.context, newReq.id, newReq.name);
+                        const initialData = { requestData: newReq.requestData, meta: { name: newReq.name, collectionId: col.id, collectionName: col.name, requestId: newReq.id } };
+                        RestClientPanel.render(this.context, newReq.id, newReq.name, 'request', initialData);
                         RestClientPanel.loadRequest(newReq.requestData, newReq.name, col.id, col.name, newReq.id);
                         await this.context.globalState.update(this.ACTIVE_REQ_KEY, newReq.id);
                         this._view?.webview.postMessage({ command: 'setActiveRequest', id: newReq.id });
@@ -168,12 +170,23 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     if (col) {
                         const req = col.requests.find(r => r.id === data.requestId);
                         if (req) {
-                            RestClientPanel.render(this.context, req.id, req.name);
+                            const initialData = { requestData: req.requestData, meta: { name: req.name, collectionId: col.id, collectionName: col.name, requestId: req.id } };
+                            RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
                             RestClientPanel.loadRequest(req.requestData, req.name, col.id, col.name, req.id);
                             await this.context.globalState.update(this.ACTIVE_REQ_KEY, req.id);
                             this._view?.webview.postMessage({ command: 'setActiveRequest', id: req.id });
                         }
                     }
+                    break;
+                }
+                case 'openEnvironment': {
+                    const envId = `env_${data.name}`;
+                    RestClientPanel.render(this.context, envId, data.name, 'environment');
+                    
+                    // Pequeño retardo para asegurar que el webview esté montado si se acaba de crear
+                    setTimeout(() => {
+                        RestClientPanel.loadEnvironment(envId, data.name);
+                    }, 200);
                     break;
                 }
             }
