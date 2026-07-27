@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Collection, SavedRequest } from '../models/Collections';
 import * as crypto from 'crypto';
 import { RestClientPanel } from '../panels/RestClientPanel';
+import { EnvironmentService } from '../services/EnvironmentService';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
@@ -181,7 +182,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 }
                 case 'openEnvironment': {
                     const envId = `env_${data.name}`;
-                    RestClientPanel.render(this.context, envId, data.name, 'environment');
+                    let initialData: any = null;
+                    
+                    if (data.name === 'Globals') {
+                        const variables = EnvironmentService.getGlobals(this.context);
+                        initialData = { variables };
+                    }
+                    
+                    RestClientPanel.render(this.context, envId, data.name, 'environment', initialData);
                     
                     // Pequeño retardo para asegurar que el webview esté montado si se acaba de crear
                     setTimeout(() => {

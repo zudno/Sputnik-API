@@ -1,4 +1,5 @@
 import { ChevronDown, Save } from "lucide-react";
+import { useRef } from "react";
 
 interface RequestPanelProps {
   method: string;
@@ -8,6 +9,57 @@ interface RequestPanelProps {
   loading: boolean;
   onSend: () => void;
   onSave?: () => void;
+}
+
+function HighlightedInput({ value, onChange, placeholder }: { value: string, onChange: (val: string) => void, placeholder?: string }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = (e: React.UIEvent<HTMLInputElement>) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+  };
+
+  const renderHighlighted = (text: string) => {
+    if (!text) return null;
+    const parts = text.split(/(\{\{[^}]+\}\})/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('{{') && part.endsWith('}}')) {
+        return <span key={i} className="text-[#5bb3ff] bg-[#1e2a35] rounded-md px-1 py-[1px]">{part}</span>;
+      }
+      return <span key={i} className="text-vsc-foreground">{part}</span>;
+    });
+  };
+
+  return (
+    <div className="relative flex-grow h-full overflow-hidden">
+      {/* Background layer for highlighted text */}
+      <div 
+        ref={scrollRef}
+        className="absolute inset-0 px-3 py-3 font-sans whitespace-pre overflow-hidden pointer-events-none"
+        aria-hidden="true"
+      >
+        {!value && placeholder ? (
+           <span className="text-neutral-500">{placeholder}</span>
+        ) : (
+           renderHighlighted(value)
+        )}
+      </div>
+      {/* Actual input overlay */}
+      <input 
+        type="text" 
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onScroll={handleScroll}
+        className="bg-transparent font-sans px-3 py-3 outline-none border-none w-full relative z-10" 
+        spellCheck={false}
+        style={{ 
+          color: 'transparent', 
+          caretColor: '#cccccc' 
+        }}
+      />
+    </div>
+  );
 }
 
 export function RequestPanel({ method, setMethod, url, setUrl, loading, onSend, onSave }: RequestPanelProps) {
@@ -39,13 +91,7 @@ export function RequestPanel({ method, setMethod, url, setUrl, loading, onSend, 
           </select>
           <ChevronDown className="absolute right-2 text-gray-400 pointer-events-none" size={16} />
         </div>
-        <input 
-          type="text" 
-          value={url}
-          onChange={e => setUrl(e.target.value)}
-          className="bg-transparent text-white placeholder-neutral-500 flex-grow font-sans px-3 py-3 outline-none border-none w-full" 
-          placeholder="Enter URL or paste text" 
-        />
+        <HighlightedInput value={url} onChange={setUrl} placeholder="Enter URL or paste text" />
       </div>
       <div className="flex bg-[#2a2d2e] rounded overflow-hidden">
         <button 

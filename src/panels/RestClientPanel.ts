@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ApiService, RequestData } from '../services/ApiService';
 import { SidebarProvider } from '../providers/SidebarProvider';
+import { EnvironmentService } from '../services/EnvironmentService';
 
 /**
  * Clase que gestiona el ciclo de vida y la comunicación del Webview del Cliente REST.
@@ -32,12 +33,12 @@ export class RestClientPanel {
         }
     }
 
-    public static loadEnvironment(environmentId: string, name: string) {
+    public static loadEnvironment(environmentId: string, name: string, variables?: any[]) {
         const panel = this.panels.get(environmentId);
         if (panel) {
             panel.webview.postMessage({
                 command: 'loadEnvironment',
-                data: { name }
+                data: { name, variables }
             });
         }
     }
@@ -88,7 +89,19 @@ export class RestClientPanel {
         panel.webview.onDidReceiveMessage(
             async (message) => {
                 if (message.command === 'sendRequest') {
-                    const requestData = message.data as RequestData;
+                    const rawRequestData = message.data as RequestData;
+                    
+                    // Obtener variables globales
+                    const globals = EnvironmentService.getGlobals(context);
+                    
+                    // Interpolar URL, Headers y Body
+                    const requestData: RequestData = {
+                        url: EnvironmentService.interpolate(rawRequestData.url, globals),
+                        method: rawRequestData.method,
+                        headers: EnvironmentService.interpolate(rawRequestData.headers, globals),
+                        body: EnvironmentService.interpolate(rawRequestData.body, globals)
+                    };
+                    
                     // Llama al servicio API para hacer la petición
                     const response = await ApiService.sendRequest(requestData);
                     
@@ -137,7 +150,12 @@ export class RestClientPanel {
                         }
                     }
                 } else if (message.command === 'saveEnvironment') {
-                    vscode.window.showInformationMessage(`Entorno '${message.data.name}' guardado correctamente.`);
+                    if (message.data.name === 'Globals') {
+                        await EnvironmentService.saveGlobals(context, message.data.variables);
+                        vscode.window.showInformationMessage('Variables Globales guardadas correctamente.');
+                    } else {
+                        vscode.window.showInformationMessage(`Entorno '${message.data.name}' guardado correctamente.`);
+                    }
                 }
             },
             undefined,

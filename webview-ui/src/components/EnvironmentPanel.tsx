@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { vscode } from "../utils/vscode";
 import { GripVertical, Trash2 } from 'lucide-react';
 
@@ -21,6 +21,12 @@ export function EnvironmentPanel({ environmentName, initialVariables = [] }: Env
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverInfo, setDragOverInfo] = useState<{ index: number, position: 'top' | 'bottom' } | null>(null);
+
+  useEffect(() => {
+    if (initialVariables && initialVariables.length > 0) {
+      setVariables(initialVariables);
+    }
+  }, [initialVariables]);
 
   const updateVariable = (id: string, field: keyof EnvironmentVariable, value: string | boolean) => {
     const newVars = variables.map(v => {

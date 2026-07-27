@@ -43,6 +43,8 @@ function MainPanel() {
   const [headers, setHeaders] = useState<HeaderItem[]>(() => parseHeaders(initialData.requestData?.headers || ""));
   const [body, setBody] = useState(initialData.requestData?.body || "");
   
+  const [initialVariables, setInitialVariables] = useState<any[]>(initialData.variables || []);
+  
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   
@@ -57,6 +59,9 @@ function MainPanel() {
       } else if (message.command === 'loadEnvironment') {
         setView('environment');
         setEnvironmentName(message.data?.name || 'Globals');
+        if (message.data?.variables) {
+          setInitialVariables(message.data.variables);
+        }
       } else if (message.command === 'loadRequest') {
         setView('request');
         setRequestMeta(message.meta || {});
@@ -112,7 +117,7 @@ function MainPanel() {
   };
 
   if (view === 'environment') {
-    return <EnvironmentPanel environmentName={environmentName} />;
+    return <EnvironmentPanel environmentName={environmentName} initialVariables={initialVariables} />;
   }
 
   return (
