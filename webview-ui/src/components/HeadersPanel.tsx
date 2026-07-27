@@ -14,7 +14,7 @@ export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
   
   // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragOverInfo, setDragOverInfo] = useState<{ index: number, position: 'top' | 'bottom' } | null>(null);
 
   // Sync bulkText when entering bulk mode
   useEffect(() => {
@@ -108,26 +108,28 @@ export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
         </button>
       </div>
 
-      <div className="flex-grow border border-vsc-panel-border overflow-hidden flex flex-col min-h-0">
+      <div className="flex-grow overflow-auto min-h-0">
         {isBulkEdit ? (
-          <Editor
-            height="100%"
-            language="plaintext"
-            theme="vs-dark"
-            value={bulkText}
-            onChange={handleBulkChange}
-            options={{
-              minimap: { enabled: false },
-              lineNumbers: 'on',
-              folding: false,
-              wordWrap: 'on',
-              fontSize: 13,
-              scrollBeyondLastLine: false,
-            }}
-          />
+          <div className="h-full border border-vsc-panel-border">
+            <Editor
+              height="100%"
+              language="plaintext"
+              theme="vs-dark"
+              value={bulkText}
+              onChange={handleBulkChange}
+              options={{
+                minimap: { enabled: false },
+                lineNumbers: 'on',
+                folding: false,
+                wordWrap: 'on',
+                fontSize: 13,
+                scrollBeyondLastLine: false,
+              }}
+            />
+          </div>
         ) : (
-          <div className="flex flex-col h-full overflow-auto bg-vsc-editor-bg">
-            <div className="grid grid-cols-[44px_1fr_1fr_1fr_40px] border-b border-vsc-panel-border bg-vsc-editor-bg font-semibold sticky top-0 z-10 text-[12px] h-[34px]">
+          <div className="flex flex-col border-l border-r border-t border-vsc-panel-border bg-vsc-editor-bg">
+            <div className="grid grid-cols-[44px_1fr_1fr_1fr_40px] border-b border-vsc-panel-border bg-vsc-editor-bg font-semibold text-[12px] h-[34px]">
               <div className="border-r border-vsc-panel-border flex items-center justify-center"></div>
               <div className="px-2 border-r border-vsc-panel-border flex items-center">Key</div>
               <div className="px-2 border-r border-vsc-panel-border flex items-center">Value</div>
@@ -138,7 +140,6 @@ export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
             <div className="flex-grow flex flex-col">
               {headers.map((header, index) => {
                 const isLastEmptyRow = index === headers.length - 1 && !header.key && !header.value && !header.description;
-                const isDragOver = dragOverIndex === index;
                 const isDragged = draggedIndex === index;
                 
                 return (
@@ -156,18 +157,23 @@ export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
                     onDragOver={(e) => {
                       e.preventDefault();
                       if (!isLastEmptyRow && draggedIndex !== null && draggedIndex !== index) {
-                        setDragOverIndex(index);
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const y = e.clientY - rect.top;
+                        const position = y < rect.height / 2 ? 'top' : 'bottom';
+                        if (dragOverInfo?.index !== index || dragOverInfo?.position !== position) {
+                          setDragOverInfo({ index, position });
+                        }
                       }
                     }}
                     onDragLeave={() => {
-                      if (dragOverIndex === index) {
-                        setDragOverIndex(null);
+                      if (dragOverInfo?.index === index) {
+                        setDragOverInfo(null);
                       }
                     }}
                     onDrop={(e) => {
                       e.preventDefault();
-                      if (draggedIndex === null || draggedIndex === index || isLastEmptyRow) {
-                        setDragOverIndex(null);
+                      if (draggedIndex === null || draggedIndex === index || isLastEmptyRow || !dragOverInfo) {
+                        setDragOverInfo(null);
                         return;
                       }
                       
@@ -175,28 +181,37 @@ export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
                       const draggedItem = newHeaders[draggedIndex];
                       
                       newHeaders.splice(draggedIndex, 1);
-                      newHeaders.splice(index, 0, draggedItem);
+                      
+                      let insertIndex = index;
+                      if (draggedIndex < index) {
+                          insertIndex = dragOverInfo.position === 'top' ? index - 1 : index;
+                      } else {
+                          insertIndex = dragOverInfo.position === 'top' ? index : index + 1;
+                      }
+                      
+                      newHeaders.splice(insertIndex, 0, draggedItem);
                       
                       setHeaders(newHeaders);
                       setDraggedIndex(null);
-                      setDragOverIndex(null);
+                      setDragOverInfo(null);
                     }}
                     onDragEnd={() => {
                       setDraggedIndex(null);
-                      setDragOverIndex(null);
+                      setDragOverInfo(null);
                     }}
                     className={`relative h-[34px] grid grid-cols-[44px_1fr_1fr_1fr_40px] border-b border-vsc-panel-border group transition-colors
                       ${isLastEmptyRow ? '' : 'hover:bg-[#222222]'}
                       ${isDragged ? 'opacity-50 bg-[#2a2d2e]' : ''}
                     `}
                     style={{
-                      // If it's drag over, we remove top border to replace with the orange one 
-                      // but tailwind class handles the color. We just adjust negative margin or similar if needed.
-                      // The border-t-2 handles it cleanly.
+                      // Tailwind class handles the color.
                     }}
                   >
-                    {isDragOver && (
+                    {dragOverInfo?.index === index && dragOverInfo?.position === 'top' && (
                       <div className="absolute top-0 left-0 w-full h-[2px] bg-[#ff6c37] pointer-events-none z-10" />
+                    )}
+                    {dragOverInfo?.index === index && dragOverInfo?.position === 'bottom' && (
+                      <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#ff6c37] pointer-events-none z-10" />
                     )}
                     {/* Handle & Checkbox Column */}
                     <div className="p-1 border-r border-vsc-panel-border flex items-center justify-center gap-1.5">
