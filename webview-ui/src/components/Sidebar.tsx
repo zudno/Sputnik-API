@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { vscode } from '../utils/vscode';
-import { Plus, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { Plus, ChevronRight, MoreHorizontal, Archive, LayoutTemplate, History } from 'lucide-react';
 import { Dropdown } from './ui/Dropdown';
 
 interface DragState {
@@ -82,19 +82,39 @@ export function Sidebar() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden text-[#cccccc] text-[13px] select-none">
-      <div className="flex border-b border-[#2b2d2e] shrink-0">
-        <button
-          onClick={() => setActiveTab('collections')}
-          className={`flex-1 py-2 text-xs font-semibold text-center cursor-pointer outline-none bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 transition-colors ${activeTab === 'collections' ? 'text-white border-[#0cbb52]' : 'text-gray-400 hover:text-white border-transparent'}`}
-        >
-          Collections
-        </button>
-        <button
-          onClick={() => setActiveTab('environments')}
-          className={`flex-1 py-2 text-xs font-semibold text-center cursor-pointer outline-none bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 transition-colors ${activeTab === 'environments' ? 'text-white border-[#0cbb52]' : 'text-gray-400 hover:text-white border-transparent'}`}
-        >
-          Environments
-        </button>
+      <div className="px-3 py-3 shrink-0">
+        <div className="flex w-full bg-transparent border border-[#2b2d2e] rounded h-[32px] overflow-hidden">
+          <button
+            onClick={() => setActiveTab('collections')}
+            className={`flex-1 flex justify-center items-center cursor-pointer outline-none transition-colors border-none m-0 p-0 h-full ${
+              activeTab === 'collections' 
+                ? 'bg-[#2a2d2e] text-[#e0e0e0]' 
+                : 'bg-transparent text-gray-500 hover:bg-[#202223] hover:text-gray-300'
+            }`}
+            title="Collections"
+          >
+            <Archive size={15} strokeWidth={2} />
+          </button>
+          <div className="w-[1px] bg-[#2b2d2e]"></div>
+          <button
+            onClick={() => setActiveTab('environments')}
+            className={`flex-1 flex justify-center items-center cursor-pointer outline-none transition-colors border-none m-0 p-0 h-full ${
+              activeTab === 'environments' 
+                ? 'bg-[#2a2d2e] text-[#e0e0e0]' 
+                : 'bg-transparent text-gray-500 hover:bg-[#202223] hover:text-gray-300'
+            }`}
+            title="Environments"
+          >
+            <LayoutTemplate size={15} strokeWidth={2} />
+          </button>
+          <div className="w-[1px] bg-[#2b2d2e]"></div>
+          <button
+            className="flex-1 flex justify-center items-center cursor-pointer outline-none transition-colors border-none m-0 p-0 h-full bg-transparent text-gray-500 hover:bg-[#202223] hover:text-gray-300"
+            title="History"
+          >
+            <History size={15} strokeWidth={2} />
+          </button>
+        </div>
       </div>
 
       {activeTab === 'collections' ? (
