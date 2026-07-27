@@ -33,7 +33,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             for (const col of collections) {
                 const req = col.requests.find(r => r.id === activeReqId);
                 if (req) {
-                    RestClientPanel.render(this.context);
+                    RestClientPanel.render(this.context, req.id, req.name);
                     RestClientPanel.loadRequest(req.requestData, req.name, col.id, col.name, req.id);
                     break;
                 }
@@ -96,7 +96,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         };
                         col.requests.push(newReq);
                         await this.saveCollections(collections);
-                        RestClientPanel.render(this.context);
+                        RestClientPanel.render(this.context, newReq.id, newReq.name);
                         RestClientPanel.loadRequest(newReq.requestData, newReq.name, col.id, col.name, newReq.id);
                         await this.context.globalState.update(this.ACTIVE_REQ_KEY, newReq.id);
                         this._view?.webview.postMessage({ command: 'setActiveRequest', id: newReq.id });
@@ -137,6 +137,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             if (newName && newName !== req.name) {
                                 req.name = newName;
                                 await this.saveCollections(collections);
+                                RestClientPanel.updatePanelTitle(req.id, newName);
                             }
                         }
                     }
@@ -167,7 +168,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     if (col) {
                         const req = col.requests.find(r => r.id === data.requestId);
                         if (req) {
-                            RestClientPanel.render(this.context);
+                            RestClientPanel.render(this.context, req.id, req.name);
                             RestClientPanel.loadRequest(req.requestData, req.name, col.id, col.name, req.id);
                             await this.context.globalState.update(this.ACTIVE_REQ_KEY, req.id);
                             this._view?.webview.postMessage({ command: 'setActiveRequest', id: req.id });

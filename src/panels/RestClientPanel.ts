@@ -7,16 +7,24 @@ import { SidebarProvider } from '../providers/SidebarProvider';
  */
 export class RestClientPanel {
     
-    public static currentPanel: vscode.WebviewPanel | undefined;
+    private static panels: Map<string, vscode.WebviewPanel> = new Map();
     private static sidebarProvider: SidebarProvider | undefined;
 
     public static setSidebarProvider(provider: SidebarProvider) {
         this.sidebarProvider = provider;
     }
 
+    public static updatePanelTitle(requestId: string, newName: string) {
+        const panel = this.panels.get(requestId);
+        if (panel) {
+            panel.title = newName;
+        }
+    }
+
     public static loadRequest(requestData: RequestData, name: string, collectionId: string, collectionName: string, requestId: string) {
-        if (this.currentPanel) {
-            this.currentPanel.webview.postMessage({
+        const panel = this.panels.get(requestId);
+        if (panel) {
+            panel.webview.postMessage({
                 command: 'loadRequest',
                 data: requestData,
                 meta: { name, collectionId, collectionName, requestId }
@@ -25,18 +33,22 @@ export class RestClientPanel {
     }
     
     /**
-     * Instancia un nuevo panel o lo muestra si ya existe.
+     * Instancia un nuevo panel o lo muestra si ya existe para ese request.
      * @param context Contexto de la extensión para manejar recursos.
+     * @param requestId ID del request
+     * @param requestName Nombre del request para el título del tab
      */
-    public static render(context: vscode.ExtensionContext): void {
-        if (this.currentPanel) {
-            this.currentPanel.reveal(vscode.ViewColumn.One);
+    public static render(context: vscode.ExtensionContext, requestId: string = 'default', requestName: string = 'Sputnik API'): void {
+        let panel = this.panels.get(requestId);
+
+        if (panel) {
+            panel.reveal(vscode.ViewColumn.One);
             return;
         }
         
-        const panel = vscode.window.createWebviewPanel(
+        panel = vscode.window.createWebviewPanel(
             'sputnikApi',
-            'Sputnik API',
+            requestName || 'Sputnik API',
             vscode.ViewColumn.One,
             { 
                 enableScripts: true,
@@ -45,10 +57,10 @@ export class RestClientPanel {
             }
         );
 
-        this.currentPanel = panel;
+        this.panels.set(requestId, panel);
 
         panel.onDidDispose(() => {
-            this.currentPanel = undefined;
+            this.panels.delete(requestId);
         });
 
         // Genera la URI segura para cargar el CSS compilado de Tailwind
@@ -110,6 +122,7 @@ export class RestClientPanel {
                             if (req) {
                                 req.name = message.name;
                                 await this.sidebarProvider.saveCollections(collections);
+                                this.updatePanelTitle(message.requestId, message.name);
                             }
                         }
                     }
