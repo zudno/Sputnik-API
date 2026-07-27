@@ -1,5 +1,5 @@
 import Editor from '@monaco-editor/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Dropdown } from './ui/Dropdown';
 
@@ -11,6 +11,72 @@ interface BodyPanelProps {
 export function BodyPanel({ body, setBody }: BodyPanelProps) {
   const [language, setLanguage] = useState('json');
   const [bodyType, setBodyType] = useState('raw');
+  const [editorInstance, setEditorInstance] = useState<any>(null);
+
+  useEffect(() => {
+    if (!editorInstance) return;
+
+    const handleCopy = (e: ClipboardEvent) => {
+      if (editorInstance.hasTextFocus()) {
+        const selection = editorInstance.getSelection();
+        const text = editorInstance.getModel().getValueInRange(selection);
+        if (text) {
+          e.clipboardData?.setData('text/plain', text);
+          e.preventDefault();
+        }
+      }
+    };
+
+    const handleCut = (e: ClipboardEvent) => {
+      if (editorInstance.hasTextFocus()) {
+        const selection = editorInstance.getSelection();
+        const text = editorInstance.getModel().getValueInRange(selection);
+        if (text) {
+          e.clipboardData?.setData('text/plain', text);
+          editorInstance.executeEdits('clipboard', [{ range: selection, text: '' }]);
+          e.preventDefault();
+        }
+      }
+    };
+
+    const handlePaste = (e: ClipboardEvent) => {
+      if (editorInstance.hasTextFocus()) {
+        const text = e.clipboardData?.getData('text/plain');
+        if (text) {
+          const selection = editorInstance.getSelection();
+          editorInstance.executeEdits('clipboard', [{
+            range: selection,
+            text: text,
+            forceMoveMarkers: true
+          }]);
+          e.preventDefault();
+        }
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Capturar los atajos de teclado nativos antes de que lleguen a Monaco
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'v' || e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'x')) {
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener('copy', handleCopy);
+    window.addEventListener('cut', handleCut);
+    window.addEventListener('paste', handlePaste);
+    window.addEventListener('keydown', handleKeyDown, true);
+
+    return () => {
+      window.removeEventListener('copy', handleCopy);
+      window.removeEventListener('cut', handleCut);
+      window.removeEventListener('paste', handlePaste);
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [editorInstance]);
+
+  const handleEditorDidMount = (editor: any) => {
+    setEditorInstance(editor);
+  };
 
   const languages = [
     { value: 'text', label: 'Text' },
@@ -92,6 +158,7 @@ export function BodyPanel({ body, setBody }: BodyPanelProps) {
               lineNumbersMinChars: 3,
               formatOnPaste: true,
             }}
+            onMount={handleEditorDidMount}
           />
         )}
       </div>

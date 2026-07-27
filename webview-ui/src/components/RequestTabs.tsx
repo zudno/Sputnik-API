@@ -22,13 +22,19 @@ export function RequestTabs({ headers, setHeaders, body, setBody }: RequestTabsP
           onClick={() => setActiveTab('headers')}
           className={`bg-transparent outline-none cursor-pointer pb-2 px-1 text-[13px] border-b-2 ${activeTab === 'headers' ? 'text-vsc-foreground font-semibold border-blue-500' : 'text-gray-400 border-transparent hover:text-vsc-foreground'}`}
         >
-          Headers {activeHeadersCount > 0 ? `(${activeHeadersCount})` : ''}
+          <span className="flex items-center gap-1.5">
+            Headers 
+            {activeHeadersCount > 0 && <span className="text-[#0cbb52] font-normal">({activeHeadersCount})</span>}
+          </span>
         </button>
         <button 
           onClick={() => setActiveTab('body')}
           className={`bg-transparent outline-none cursor-pointer pb-2 px-1 text-[13px] border-b-2 ${activeTab === 'body' ? 'text-vsc-foreground font-semibold border-blue-500' : 'text-gray-400 border-transparent hover:text-vsc-foreground'}`}
         >
-          Body {body.trim() ? '(•)' : ''}
+          <span className="flex items-center gap-1.5">
+            Body 
+            {body.trim() && <span className="w-[6px] h-[6px] rounded-full bg-[#0cbb52] inline-block"></span>}
+          </span>
         </button>
       </div>
       
