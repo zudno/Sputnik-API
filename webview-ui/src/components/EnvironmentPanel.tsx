@@ -126,7 +126,7 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
 
       <div className="flex-1 overflow-auto min-h-0">
         <div className="flex flex-col border-l border-r border-t border-vsc-panel-border bg-vsc-editor-bg">
-          <div className="grid grid-cols-[44px_1fr_1fr_40px] border-b border-vsc-panel-border bg-vsc-editor-bg font-semibold text-[12px] h-[34px]">
+          <div className="grid grid-cols-[44px_1fr_1fr_40px] border-b border-vsc-panel-border bg-[#222222] font-semibold text-[12px] h-[34px]">
             <div className="border-r border-vsc-panel-border flex items-center justify-center"></div>
             <div className="px-2 border-r border-vsc-panel-border flex items-center">Variable</div>
             <div className="px-2 border-r border-vsc-panel-border flex items-center">Value</div>
