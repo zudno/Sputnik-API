@@ -10,17 +10,24 @@ export interface EnvironmentVariable {
 }
 
 interface EnvironmentPanelProps {
+  environmentId?: string;
   environmentName: string;
   initialVariables?: EnvironmentVariable[];
 }
 
-export function EnvironmentPanel({ environmentName, initialVariables = [] }: EnvironmentPanelProps) {
+export function EnvironmentPanel({ environmentId = 'Globals', environmentName, initialVariables = [] }: EnvironmentPanelProps) {
   const [variables, setVariables] = useState<EnvironmentVariable[]>(
     initialVariables.length > 0 ? initialVariables : [{ id: crypto.randomUUID(), key: '', value: '', enabled: true }]
   );
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverInfo, setDragOverInfo] = useState<{ index: number, position: 'top' | 'bottom' } | null>(null);
+
+  const [name, setName] = useState(environmentName);
+
+  useEffect(() => {
+    setName(environmentName);
+  }, [environmentName]);
 
   useEffect(() => {
     if (initialVariables && initialVariables.length > 0) {
@@ -52,11 +59,28 @@ export function EnvironmentPanel({ environmentName, initialVariables = [] }: Env
     setVariables(variables.filter(v => v.id !== id));
   };
 
+  const handleRename = () => {
+    let finalName = name.trim();
+    if (!finalName) {
+      finalName = 'New Environment';
+      setName(finalName);
+    }
+    
+    if (environmentId !== 'Globals' && finalName !== environmentName) {
+      vscode.postMessage({
+        command: 'renameEnvironmentFromPanel',
+        id: environmentId,
+        name: finalName
+      });
+    }
+  };
+
   const handleSave = () => {
     vscode.postMessage({
       command: 'saveEnvironment',
       data: {
-        name: environmentName,
+        id: environmentId,
+        name: name,
         variables: variables.filter(v => v.key.trim() !== '')
       }
     });
@@ -65,7 +89,40 @@ export function EnvironmentPanel({ environmentName, initialVariables = [] }: Env
   return (
     <div className="flex flex-col h-full bg-vsc-editor-bg text-vsc-foreground p-5">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-[15px] font-bold text-[#cccccc]">{environmentName}</h2>
+        <div className="flex items-center text-[13px] h-[28px]">
+          <span className="text-blue-400 font-semibold mr-2">ENV</span>
+          {environmentId === 'Globals' ? (
+             <div className="inline-grid items-center">
+               <span className="px-1.5 py-0.5 font-semibold text-white">Globals</span>
+             </div>
+          ) : (
+            <>
+              <button className="text-neutral-500 font-normal hover:bg-[#2a2d2e] hover:text-gray-200 px-1.5 py-0.5 rounded cursor-pointer outline-none border-none bg-transparent m-0 transition-colors">
+                Environments
+              </button>
+              <span className="text-neutral-500 font-normal mx-2">/</span>
+              <div className="inline-grid items-center">
+                <span className="invisible whitespace-pre px-1.5 py-0.5 font-semibold col-start-1 row-start-1 pointer-events-none min-w-[1ch] border-2 border-transparent">
+                  {name || ''}
+                </span>
+                <input 
+                  value={name || ''} 
+                  size={1}
+                  onChange={e => setName(e.target.value)}
+                  onBlur={handleRename}
+                  onFocus={e => e.target.select()}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="bg-transparent border-2 border-transparent focus:border-[#007fd4] focus:bg-transparent text-white outline-none cursor-text hover:bg-[#2a2d2e] px-1.5 py-0.5 rounded font-semibold w-full min-w-0 col-start-1 row-start-1 m-0 leading-tight transition-colors" 
+                />
+              </div>
+            </>
+          )}
+        </div>
+        
         <button 
           onClick={handleSave}
           className="bg-[#0cbb52] hover:bg-[#0aa647] text-white px-4 py-1.5 rounded text-[13px] cursor-pointer outline-none border-none transition-colors"

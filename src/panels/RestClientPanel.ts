@@ -33,12 +33,22 @@ export class RestClientPanel {
         }
     }
 
-    public static loadEnvironment(environmentId: string, name: string, variables?: any[]) {
+    public static broadcastEnvironments(environments: any[], activeEnvironmentId: string | null) {
+        this.panels.forEach((panel) => {
+            panel.webview.postMessage({
+                command: 'environmentsUpdated',
+                environments,
+                activeEnvironmentId
+            });
+        });
+    }
+
+    public static loadEnvironment(environmentId: string, name: string, variables?: any[], id?: string) {
         const panel = this.panels.get(environmentId);
         if (panel) {
             panel.webview.postMessage({
                 command: 'loadEnvironment',
-                data: { name, variables }
+                data: { name, variables, id }
             });
         }
     }
@@ -91,15 +101,15 @@ export class RestClientPanel {
                 if (message.command === 'sendRequest') {
                     const rawRequestData = message.data as RequestData;
                     
-                    // Obtener variables globales
-                    const globals = EnvironmentService.getGlobals(context);
+                    // Obtener variables combinadas (Globals + Entorno Activo)
+                    const combinedVars = EnvironmentService.getCombinedVariables(context);
                     
                     // Interpolar URL, Headers y Body
                     const requestData: RequestData = {
-                        url: EnvironmentService.interpolate(rawRequestData.url, globals),
+                        url: EnvironmentService.interpolate(rawRequestData.url, combinedVars),
                         method: rawRequestData.method,
-                        headers: EnvironmentService.interpolate(rawRequestData.headers, globals),
-                        body: EnvironmentService.interpolate(rawRequestData.body, globals)
+                        headers: EnvironmentService.interpolate(rawRequestData.headers, combinedVars),
+                        body: EnvironmentService.interpolate(rawRequestData.body, combinedVars)
                     };
                     
                     // Llama al servicio API para hacer la petición
@@ -150,11 +160,34 @@ export class RestClientPanel {
                         }
                     }
                 } else if (message.command === 'saveEnvironment') {
-                    if (message.data.name === 'Globals') {
+                    if (message.data.id === 'Globals' || message.data.name === 'Globals') {
                         await EnvironmentService.saveGlobals(context, message.data.variables);
                         vscode.window.showInformationMessage('Variables Globales guardadas correctamente.');
-                    } else {
-                        vscode.window.showInformationMessage(`Entorno '${message.data.name}' guardado correctamente.`);
+                    } else if (message.data.id) {
+                        const environments = EnvironmentService.getEnvironments(context);
+                        const envIndex = environments.findIndex(e => e.id === message.data.id);
+                        if (envIndex !== -1) {
+                            environments[envIndex].variables = message.data.variables;
+                            // Optionally update name if passed
+                            if (message.data.name) {
+                                environments[envIndex].name = message.data.name;
+                            }
+                            await EnvironmentService.saveEnvironments(context, environments);
+                            vscode.window.showInformationMessage(`Entorno '${message.data.name}' guardado correctamente.`);
+                            if (this.sidebarProvider) {
+                                this.sidebarProvider.sendStateToWebview();
+                            }
+                        }
+                    }
+                } else if (message.command === 'renameEnvironmentFromPanel') {
+                    if (this.sidebarProvider) {
+                        const environments = EnvironmentService.getEnvironments(context);
+                        const env = environments.find(e => e.id === message.id);
+                        if (env) {
+                            env.name = message.name;
+                            await EnvironmentService.saveEnvironments(context, environments);
+                            this.sidebarProvider.sendStateToWebview();
+                        }
                     }
                 }
             },

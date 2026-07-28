@@ -45,7 +45,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.command) {
                 case 'getCollections': {
-                    this.sendCollectionsToWebview();
+                    this.sendStateToWebview();
                     break;
                 }
                 case 'addCollection': {
@@ -56,6 +56,51 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         requests: []
                     });
                     await this.saveCollections(collections);
+                    break;
+                }
+                case 'addEnvironment': {
+                    const environments = EnvironmentService.getEnvironments(this.context);
+                    environments.push({
+                        id: crypto.randomUUID(),
+                        name: data.name,
+                        variables: []
+                    });
+                    await EnvironmentService.saveEnvironments(this.context, environments);
+                    this.sendStateToWebview();
+                    break;
+                }
+                case 'deleteEnvironment': {
+                    let environments = EnvironmentService.getEnvironments(this.context);
+                    const envToDelete = environments.find(e => e.id === data.id);
+                    if (envToDelete) {
+                        const answer = await vscode.window.showWarningMessage(`¿Eliminar entorno '${envToDelete.name}'?`, { modal: true }, 'Sí', 'No');
+                        if (answer === 'Sí') {
+                            environments = environments.filter(e => e.id !== data.id);
+                            await EnvironmentService.saveEnvironments(this.context, environments);
+                            if (EnvironmentService.getActiveEnvironmentId(this.context) === data.id) {
+                                await EnvironmentService.setActiveEnvironmentId(this.context, null);
+                            }
+                            this.sendStateToWebview();
+                        }
+                    }
+                    break;
+                }
+                case 'renameEnvironment': {
+                    const environments = EnvironmentService.getEnvironments(this.context);
+                    const env = environments.find(e => e.id === data.id);
+                    if (env) {
+                        const newName = await vscode.window.showInputBox({ prompt: 'Nuevo nombre del entorno:', value: env.name });
+                        if (newName && newName !== env.name) {
+                            env.name = newName;
+                            await EnvironmentService.saveEnvironments(this.context, environments);
+                            this.sendStateToWebview();
+                        }
+                    }
+                    break;
+                }
+                case 'setActiveEnvironment': {
+                    await EnvironmentService.setActiveEnvironmentId(this.context, data.id);
+                    this.sendStateToWebview();
                     break;
                 }
                 case 'deleteCollection': {
@@ -181,19 +226,26 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'openEnvironment': {
-                    const envId = `env_${data.name}`;
+                    // Si data.id no viene, asume que es Globals
+                    const envId = data.id ? `env_${data.id}` : `env_Globals`;
                     let initialData: any = null;
                     
-                    if (data.name === 'Globals') {
+                    if (data.name === 'Globals' || !data.id) {
                         const variables = EnvironmentService.getGlobals(this.context);
-                        initialData = { variables };
+                        initialData = { variables, id: 'Globals' };
+                    } else {
+                        const environments = EnvironmentService.getEnvironments(this.context);
+                        const env = environments.find(e => e.id === data.id);
+                        if (env) {
+                            initialData = { variables: env.variables, id: env.id };
+                        }
                     }
                     
                     RestClientPanel.render(this.context, envId, data.name, 'environment', initialData);
                     
                     // Pequeño retardo para asegurar que el webview esté montado si se acaba de crear
                     setTimeout(() => {
-                        RestClientPanel.loadEnvironment(envId, data.name);
+                        RestClientPanel.loadEnvironment(envId, data.name, initialData?.variables, initialData?.id);
                     }, 200);
                     break;
                 }
@@ -207,7 +259,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     public async saveCollections(collections: Collection[]) {
         await this.context.globalState.update(this.STATE_KEY, collections);
-        this.sendCollectionsToWebview();
+        this.sendStateToWebview();
     }
 
     public async saveRequestData(collectionId: string, requestId: string, requestData: any) {
@@ -235,13 +287,24 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private sendCollectionsToWebview() {
+    public sendStateToWebview() {
         if (this._view) {
             this._view.webview.postMessage({
                 command: 'collectionsUpdated',
                 collections: this.getCollections(),
                 activeRequestId: this.context.globalState.get<string | null>(this.ACTIVE_REQ_KEY, null)
             });
+            
+            const environments = EnvironmentService.getEnvironments(this.context);
+            const activeEnvironmentId = EnvironmentService.getActiveEnvironmentId(this.context);
+            
+            this._view.webview.postMessage({
+                command: 'environmentsUpdated',
+                environments,
+                activeEnvironmentId
+            });
+            
+            RestClientPanel.broadcastEnvironments(environments, activeEnvironmentId);
         }
     }
 

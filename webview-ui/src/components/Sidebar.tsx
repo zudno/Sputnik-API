@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { vscode } from '../utils/vscode';
-import { Plus, ChevronRight, MoreHorizontal, Archive, LayoutTemplate, History } from 'lucide-react';
+import { Plus, ChevronRight, MoreHorizontal, Archive, LayoutTemplate, History, Check } from 'lucide-react';
 import { Dropdown } from './ui/Dropdown';
 
 interface DragState {
@@ -15,7 +15,9 @@ interface DragState {
 export function Sidebar() {
   const [activeTab, setActiveTab] = useState<'collections' | 'environments'>('collections');
   const [collections, setCollections] = useState<any[]>([]);
+  const [environments, setEnvironments] = useState<any[]>([]);
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const [activeEnvironmentId, setActiveEnvironmentId] = useState<string | null>(null);
   const [draggedRequestId, setDraggedRequestId] = useState<string | null>(null);
   const [dragOverInfo, setDragOverInfo] = useState<{ id: string, position: 'top' | 'bottom' | 'inside' } | null>(null);
 
@@ -62,6 +64,19 @@ export function Sidebar() {
         setCollections(message.collections);
         if (message.activeRequestId !== undefined) {
           setActiveRequestId(message.activeRequestId);
+        }
+        if (message.environments !== undefined) {
+          setEnvironments(message.environments);
+        }
+        if (message.activeEnvironmentId !== undefined) {
+          setActiveEnvironmentId(message.activeEnvironmentId);
+        }
+      } else if (message.command === 'environmentsUpdated') {
+        if (message.environments !== undefined) {
+          setEnvironments(message.environments);
+        }
+        if (message.activeEnvironmentId !== undefined) {
+          setActiveEnvironmentId(message.activeEnvironmentId);
         }
       } else if (message.command === 'setActiveRequest') {
         setActiveRequestId(message.id);
@@ -159,19 +174,60 @@ export function Sidebar() {
           </div>
           <div className="flex-1 overflow-y-auto">
             <div 
-              className="flex justify-between items-center py-2 px-4 hover:bg-[#2a2d2e] cursor-pointer transition-colors"
-              onClick={() => vscode.postMessage({ command: 'openEnvironment', name: 'Globals' })}
+              className={`flex justify-between items-center py-2 px-4 hover:bg-[#2a2d2e] cursor-pointer transition-colors ${!activeEnvironmentId ? 'bg-[#37373d]' : ''}`}
+              onClick={() => {
+                vscode.postMessage({ command: 'openEnvironment', name: 'Globals', id: 'Globals' });
+                vscode.postMessage({ command: 'setActiveEnvironment', id: null });
+              }}
             >
               <div className="flex items-center gap-2">
                 <span className="text-[13px] text-[#cccccc]">Globals</span>
               </div>
+              {!activeEnvironmentId && <Check size={16} className="text-gray-400" />}
             </div>
             
             <div className="h-[1px] bg-[#2b2d2e] mx-4 my-1"></div>
 
-            <div className="p-4 text-center text-gray-500">
-              No environments yet. Click + to create one.
-            </div>
+            {environments.map(env => (
+              <div 
+                key={env.id}
+                className={`flex justify-between items-center py-2 px-4 hover:bg-[#2a2d2e] group cursor-pointer transition-colors ${activeEnvironmentId === env.id ? 'bg-[#37373d]' : ''}`}
+                onClick={() => {
+                  vscode.postMessage({ command: 'openEnvironment', name: env.name, id: env.id });
+                  vscode.postMessage({ command: 'setActiveEnvironment', id: env.id });
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] text-[#cccccc] truncate">{env.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="invisible group-hover:visible">
+                    <Dropdown
+                      align="end"
+                      trigger={
+                        <button 
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-6 h-6 flex items-center justify-center hover:bg-[#3c3e40] rounded text-gray-400 hover:text-white transition-colors outline-none border-none bg-transparent cursor-pointer"
+                        >
+                          <MoreHorizontal size={16} />
+                        </button>
+                      }
+                      items={[
+                        { label: 'Rename', onClick: (e) => { e?.stopPropagation(); vscode.postMessage({ command: 'renameEnvironment', id: env.id }); } },
+                        { label: 'Delete', onClick: (e) => { e?.stopPropagation(); vscode.postMessage({ command: 'deleteEnvironment', id: env.id }); }, danger: true }
+                      ]}
+                    />
+                  </div>
+                  {activeEnvironmentId === env.id && <Check size={16} className="text-gray-400" />}
+                </div>
+              </div>
+            ))}
+
+            {environments.length === 0 && (
+              <div className="p-4 text-center text-gray-500">
+                No custom environments yet. Click + to create one.
+              </div>
+            )}
           </div>
         </>
       )}

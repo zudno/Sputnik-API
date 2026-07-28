@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
+import { ChevronDown, Check } from "lucide-react";
 import { RequestPanel } from "./components/RequestPanel";
 import { RequestTabs } from "./components/RequestTabs";
 import { ResponsePanel } from "./components/ResponsePanel";
@@ -8,6 +9,7 @@ import { Breadcrumb } from "./components/Breadcrumb";
 import { EnvironmentPanel } from "./components/EnvironmentPanel";
 import type { HeaderItem } from "./types";
 import { vscode } from "./utils/vscode";
+import { Dropdown } from "./components/ui/Dropdown";
 
 const parseHeaders = (headersStr: string) => {
   const parsedHeaders: HeaderItem[] = [];
@@ -29,6 +31,32 @@ const parseHeaders = (headersStr: string) => {
   return parsedHeaders;
 };
 
+function EnvironmentSelector({ environments, activeEnvironmentId }: { environments: any[], activeEnvironmentId: string | null }) {
+  const activeEnv = environments.find(e => e.id === activeEnvironmentId);
+  
+  const trigger = (
+    <button className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-transparent hover:bg-[#2a2d2e] text-[#cccccc] hover:text-white cursor-pointer text-[13px] font-sans outline-none border border-[#2b2d2e] transition-colors">
+      <span className="truncate max-w-[150px]">{activeEnv ? activeEnv.name : 'Globals'}</span>
+      <ChevronDown size={14} className="text-gray-400" />
+    </button>
+  );
+
+  const items = [
+    { 
+      label: 'Globals', 
+      onClick: (e: any) => { e?.preventDefault(); vscode.postMessage({ command: 'setActiveEnvironment', id: null }); },
+      icon: activeEnvironmentId === null ? <Check size={14} className="text-gray-400" /> : <div className="w-3.5 h-3.5" />
+    },
+    ...environments.map(env => ({
+      label: env.name,
+      onClick: (e: any) => { e?.preventDefault(); vscode.postMessage({ command: 'setActiveEnvironment', id: env.id }); },
+      icon: activeEnvironmentId === env.id ? <Check size={14} className="text-gray-400" /> : <div className="w-3.5 h-3.5" />
+    }))
+  ];
+
+  return <Dropdown trigger={trigger} items={items} align="end" />;
+}
+
 function MainPanel() {
   // @ts-ignore
   const vscodeData = window.vscodeData || {};
@@ -37,6 +65,7 @@ function MainPanel() {
 
   const [view, setView] = useState<'request' | 'environment'>(initialView);
   const [environmentName, setEnvironmentName] = useState<string>('Globals');
+  const [environmentId, setEnvironmentId] = useState<string>('Globals');
   
   const [method, setMethod] = useState(initialData.requestData?.method || "GET");
   const [url, setUrl] = useState(initialData.requestData?.url || "");
@@ -47,6 +76,9 @@ function MainPanel() {
   
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  
+  const [environments, setEnvironments] = useState<any[]>([]);
+  const [activeEnvironmentId, setActiveEnvironmentId] = useState<string | null>(null);
   
   const [requestMeta, setRequestMeta] = useState<{name?: string, collectionName?: string, collectionId?: string, requestId?: string}>(initialData.meta || {});
 
@@ -59,6 +91,7 @@ function MainPanel() {
       } else if (message.command === 'loadEnvironment') {
         setView('environment');
         setEnvironmentName(message.data?.name || 'Globals');
+        setEnvironmentId(message.data?.id || 'Globals');
         if (message.data?.variables) {
           setInitialVariables(message.data.variables);
         }
@@ -71,6 +104,13 @@ function MainPanel() {
         setBody(req.body || '');
         setHeaders(parseHeaders(req.headers || ''));
         setResponse(null); // Clear previous response when loading
+      } else if (message.command === 'environmentsUpdated') {
+        if (message.environments !== undefined) {
+          setEnvironments(message.environments);
+        }
+        if (message.activeEnvironmentId !== undefined) {
+          setActiveEnvironmentId(message.activeEnvironmentId);
+        }
       }
     };
     
@@ -117,13 +157,16 @@ function MainPanel() {
   };
 
   if (view === 'environment') {
-    return <EnvironmentPanel environmentName={environmentName} initialVariables={initialVariables} />;
+    return <EnvironmentPanel environmentId={environmentId} environmentName={environmentName} initialVariables={initialVariables} />;
   }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden text-vsc-foreground bg-vsc-editor-bg">
       <div className="p-5 pb-2 flex-shrink-0 flex flex-col gap-4">
-        <Breadcrumb requestMeta={requestMeta} setRequestMeta={setRequestMeta} />
+        <div className="flex justify-between items-center w-full">
+          <Breadcrumb requestMeta={requestMeta} setRequestMeta={setRequestMeta} />
+          <EnvironmentSelector environments={environments} activeEnvironmentId={activeEnvironmentId} />
+        </div>
         
         <RequestPanel 
           method={method} 
