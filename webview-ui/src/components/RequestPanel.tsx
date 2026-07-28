@@ -1,5 +1,6 @@
-import { ChevronDown, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useRef } from "react";
+import { MethodDropdown } from "./ui/MethodDropdown";
 
 interface RequestPanelProps {
   method: string;
@@ -63,33 +64,11 @@ function HighlightedInput({ value, onChange, placeholder }: { value: string, onC
 }
 
 export function RequestPanel({ method, setMethod, url, setUrl, loading, onSend, onSave }: RequestPanelProps) {
-  const getMethodColor = (m: string) => {
-    switch(m) {
-      case 'GET': return 'text-vsc-http-get';
-      case 'POST': return 'text-vsc-http-post';
-      case 'PUT': return 'text-vsc-http-put';
-      case 'PATCH': return 'text-vsc-http-patch';
-      case 'DELETE': return 'text-vsc-http-delete';
-      default: return 'text-vsc-foreground';
-    }
-  };
-
   return (
     <div className="flex gap-2">
       <div className="flex flex-grow items-stretch border border-vsc-panel-border rounded bg-transparent focus-within:border-vsc-focus focus-within:outline focus-within:outline-1 focus-within:outline-vsc-focus">
         <div className="flex items-center border-r border-vsc-panel-border relative">
-          <select 
-            value={method} 
-            onChange={e => setMethod(e.target.value)}
-            className={`bg-transparent font-bold cursor-pointer outline-none border-none pl-3 pr-7 py-3 appearance-none h-full ${getMethodColor(method)}`}
-          >
-            <option value="GET">GET</option>
-            <option value="POST">POST</option>
-            <option value="PUT">PUT</option>
-            <option value="DELETE">DELETE</option>
-            <option value="PATCH">PATCH</option>
-          </select>
-          <ChevronDown className="absolute right-2 text-gray-400 pointer-events-none" size={16} />
+          <MethodDropdown method={method} setMethod={setMethod} />
         </div>
         <HighlightedInput value={url} onChange={setUrl} placeholder="Enter URL or paste text" />
       </div>
