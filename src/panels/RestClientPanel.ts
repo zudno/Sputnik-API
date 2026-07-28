@@ -189,6 +189,11 @@ export class RestClientPanel {
                             this.sidebarProvider.sendStateToWebview();
                         }
                     }
+                } else if (message.command === 'setActiveEnvironment') {
+                    if (this.sidebarProvider) {
+                        await EnvironmentService.setActiveEnvironmentId(context, message.id);
+                        this.sidebarProvider.sendStateToWebview();
+                    }
                 }
             },
             undefined,

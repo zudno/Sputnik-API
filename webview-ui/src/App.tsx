@@ -36,14 +36,14 @@ function EnvironmentSelector({ environments, activeEnvironmentId }: { environmen
   
   const trigger = (
     <button className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-transparent hover:bg-[#2a2d2e] text-[#cccccc] hover:text-white cursor-pointer text-[13px] font-sans outline-none border border-[#2b2d2e] transition-colors">
-      <span className="truncate max-w-[150px]">{activeEnv ? activeEnv.name : 'Globals'}</span>
+      <span className="truncate max-w-[150px]">{activeEnv ? activeEnv.name : 'No Environment'}</span>
       <ChevronDown size={14} className="text-gray-400" />
     </button>
   );
 
   const items = [
     { 
-      label: 'Globals', 
+      label: 'No Environment', 
       onClick: (e: any) => { e?.preventDefault(); vscode.postMessage({ command: 'setActiveEnvironment', id: null }); },
       icon: activeEnvironmentId === null ? <Check size={14} className="text-gray-400" /> : <div className="w-3.5 h-3.5" />
     },
@@ -77,8 +77,8 @@ function MainPanel() {
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   
-  const [environments, setEnvironments] = useState<any[]>([]);
-  const [activeEnvironmentId, setActiveEnvironmentId] = useState<string | null>(null);
+  const [environments, setEnvironments] = useState<any[]>(initialData.environments || []);
+  const [activeEnvironmentId, setActiveEnvironmentId] = useState<string | null>(initialData.activeEnvironmentId || null);
   
   const [requestMeta, setRequestMeta] = useState<{name?: string, collectionName?: string, collectionId?: string, requestId?: string}>(initialData.meta || {});
 
