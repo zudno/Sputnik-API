@@ -87,7 +87,7 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
   };
 
   return (
-    <div className="flex flex-col h-full bg-vsc-editor-bg text-vsc-foreground p-5">
+    <div className="flex flex-col h-full bg-vsc-editor-bg text-vsc-foreground px-4 pt-3 pb-1">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center text-[13px] h-[28px]">
           <span className="text-blue-400 font-semibold mr-2">ENV</span>
