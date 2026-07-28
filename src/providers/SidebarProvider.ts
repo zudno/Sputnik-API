@@ -3,11 +3,12 @@ import { Collection, CollectionItem } from '../models/Collections';
 import * as crypto from 'crypto';
 import { RestClientPanel } from '../panels/RestClientPanel';
 import { EnvironmentService } from '../services/EnvironmentService';
+import { WorkspaceService } from '../services/WorkspaceService';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
-    private readonly STATE_KEY = 'sputnik_collections';
-    private readonly ACTIVE_REQ_KEY = 'sputnik_active_request';
+    private getCollectionsKey(workspaceId: string) { return `sputnik_collections_${workspaceId}`; }
+    private getActiveReqKey(workspaceId: string) { return `sputnik_active_request_${workspaceId}`; }
 
     constructor(private context: vscode.ExtensionContext) {}
 
@@ -28,7 +29,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = this.getHtmlContent(scriptUri, styleUri);
 
-        const activeReqId = this.context.globalState.get<string | null>(this.ACTIVE_REQ_KEY, null);
+        const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
+        const activeReqId = this.context.globalState.get<string | null>(this.getActiveReqKey(activeWorkspaceId), null);
         if (activeReqId) {
             const collections = this.getCollections();
             const result = this.findNode(activeReqId, collections);
@@ -38,8 +40,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 const initialData = { 
                     requestData: req.requestData!, 
                     meta: { name: req.name, collectionId: rootCollection.id, collectionName: rootCollection.name, requestId: req.id },
-                    environments: EnvironmentService.getEnvironments(this.context),
-                    activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context)
+                    environments: EnvironmentService.getEnvironments(this.context, activeWorkspaceId),
+                    activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId)
                 };
                 RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
                 RestClientPanel.loadRequest(req.requestData!, req.name, rootCollection.id, rootCollection.name, req.id);
@@ -63,26 +65,28 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'addEnvironment': {
-                    const environments = EnvironmentService.getEnvironments(this.context);
+                    const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
+                    const environments = EnvironmentService.getEnvironments(this.context, activeWorkspaceId);
                     environments.push({
                         id: crypto.randomUUID(),
                         name: data.name,
                         variables: []
                     });
-                    await EnvironmentService.saveEnvironments(this.context, environments);
+                    await EnvironmentService.saveEnvironments(this.context, activeWorkspaceId, environments);
                     this.sendStateToWebview();
                     break;
                 }
                 case 'deleteEnvironment': {
-                    let environments = EnvironmentService.getEnvironments(this.context);
+                    const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
+                    let environments = EnvironmentService.getEnvironments(this.context, activeWorkspaceId);
                     const envToDelete = environments.find(e => e.id === data.id);
                     if (envToDelete) {
                         const answer = await vscode.window.showWarningMessage(`¿Eliminar entorno '${envToDelete.name}'?`, { modal: true }, 'Sí', 'No');
                         if (answer === 'Sí') {
                             environments = environments.filter(e => e.id !== data.id);
-                            await EnvironmentService.saveEnvironments(this.context, environments);
-                            if (EnvironmentService.getActiveEnvironmentId(this.context) === data.id) {
-                                await EnvironmentService.setActiveEnvironmentId(this.context, null);
+                            await EnvironmentService.saveEnvironments(this.context, activeWorkspaceId, environments);
+                            if (EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId) === data.id) {
+                                await EnvironmentService.setActiveEnvironmentId(this.context, activeWorkspaceId, null);
                             }
                             this.sendStateToWebview();
                         }
@@ -90,30 +94,33 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'renameEnvironment': {
-                    const environments = EnvironmentService.getEnvironments(this.context);
+                    const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
+                    const environments = EnvironmentService.getEnvironments(this.context, activeWorkspaceId);
                     const env = environments.find(e => e.id === data.id);
                     if (env) {
                         const newName = await vscode.window.showInputBox({ prompt: 'Nuevo nombre del entorno:', value: env.name });
                         if (newName && newName !== env.name) {
                             env.name = newName;
-                            await EnvironmentService.saveEnvironments(this.context, environments);
+                            await EnvironmentService.saveEnvironments(this.context, activeWorkspaceId, environments);
                             this.sendStateToWebview();
                         }
                     }
                     break;
                 }
                 case 'renameEnvironmentInline': {
-                    const environments = EnvironmentService.getEnvironments(this.context);
+                    const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
+                    const environments = EnvironmentService.getEnvironments(this.context, activeWorkspaceId);
                     const env = environments.find(e => e.id === data.id);
                     if (env && data.name && data.name !== env.name) {
                         env.name = data.name;
-                        await EnvironmentService.saveEnvironments(this.context, environments);
+                        await EnvironmentService.saveEnvironments(this.context, activeWorkspaceId, environments);
                         this.sendStateToWebview();
                     }
                     break;
                 }
                 case 'setActiveEnvironment': {
-                    await EnvironmentService.setActiveEnvironmentId(this.context, data.id);
+                    const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
+                    await EnvironmentService.setActiveEnvironmentId(this.context, activeWorkspaceId, data.id);
                     this.sendStateToWebview();
                     break;
                 }
@@ -193,15 +200,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         
                         const rootCollection = this.getRootCollection(collections, result.item.id) || result.item;
                         
+                        const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
                         const initialData = { 
                             requestData: newReq.requestData!, 
                             meta: { name: newReq.name, collectionId: rootCollection.id, collectionName: rootCollection.name, requestId: newReq.id },
-                            environments: EnvironmentService.getEnvironments(this.context),
-                            activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context)
+                            environments: EnvironmentService.getEnvironments(this.context, activeWorkspaceId),
+                            activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId)
                         };
                         RestClientPanel.render(this.context, newReq.id, newReq.name, 'request', initialData);
                         RestClientPanel.loadRequest(newReq.requestData!, newReq.name, rootCollection.id, rootCollection.name, newReq.id);
-                        await this.context.globalState.update(this.ACTIVE_REQ_KEY, newReq.id);
+                        await this.context.globalState.update(this.getActiveReqKey(activeWorkspaceId), newReq.id);
                         this._view?.webview.postMessage({ command: 'setActiveRequest', id: newReq.id });
                     }
                     break;
@@ -287,29 +295,31 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     if (result && (result.item as CollectionItem).type === 'request') {
                         const req = result.item as CollectionItem;
                         const rootCollection = this.getRootCollection(collections, req.id) || req;
+                        const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
                         const initialData = { 
                             requestData: req.requestData!, 
                             meta: { name: req.name, collectionId: rootCollection.id, collectionName: rootCollection.name, requestId: req.id },
-                            environments: EnvironmentService.getEnvironments(this.context),
-                            activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context)
+                            environments: EnvironmentService.getEnvironments(this.context, activeWorkspaceId),
+                            activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId)
                         };
                         RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
                         RestClientPanel.loadRequest(req.requestData!, req.name, rootCollection.id, rootCollection.name, req.id);
-                        await this.context.globalState.update(this.ACTIVE_REQ_KEY, req.id);
+                        await this.context.globalState.update(this.getActiveReqKey(activeWorkspaceId), req.id);
                         this._view?.webview.postMessage({ command: 'setActiveRequest', id: req.id });
                     }
                     break;
                 }
                 case 'openEnvironment': {
+                    const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
                     // Si data.id no viene, asume que es Globals
                     const envId = data.id ? `env_${data.id}` : `env_Globals`;
                     let initialData: any = null;
                     
                     if (data.name === 'Globals' || !data.id) {
-                        const variables = EnvironmentService.getGlobals(this.context);
+                        const variables = EnvironmentService.getGlobals(this.context, activeWorkspaceId);
                         initialData = { variables, id: 'Globals', name: 'Globals' };
                     } else {
-                        const environments = EnvironmentService.getEnvironments(this.context);
+                        const environments = EnvironmentService.getEnvironments(this.context, activeWorkspaceId);
                         const env = environments.find(e => e.id === data.id);
                         if (env) {
                             initialData = { variables: env.variables, id: env.id, name: env.name };
@@ -324,12 +334,24 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }, 200);
                     break;
                 }
+                case 'setActiveWorkspace': {
+                    await WorkspaceService.setActiveWorkspaceId(this.context, data.id);
+                    this.sendStateToWebview();
+                    break;
+                }
+                case 'createWorkspace': {
+                    const newWorkspace = await WorkspaceService.createWorkspace(this.context, data.name, data.type);
+                    await WorkspaceService.setActiveWorkspaceId(this.context, newWorkspace.id);
+                    this.sendStateToWebview();
+                    break;
+                }
             }
         });
     }
 
     public getCollections(): Collection[] {
-        const collections = this.context.globalState.get<Collection[]>(this.STATE_KEY, []);
+        const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
+        const collections = this.context.globalState.get<Collection[]>(this.getCollectionsKey(activeWorkspaceId), []);
         let migrated = false;
         
         for (const col of collections) {
@@ -354,7 +376,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     public async saveCollections(collections: Collection[]) {
-        await this.context.globalState.update(this.STATE_KEY, collections);
+        const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
+        await this.context.globalState.update(this.getCollectionsKey(activeWorkspaceId), collections);
         this.sendStateToWebview();
     }
 
@@ -393,14 +416,22 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     public sendStateToWebview() {
         if (this._view) {
+            const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
+            
+            this._view.webview.postMessage({
+                command: 'workspacesUpdated',
+                workspaces: WorkspaceService.getWorkspaces(this.context),
+                activeWorkspaceId
+            });
+
             this._view.webview.postMessage({
                 command: 'collectionsUpdated',
                 collections: this.getCollections(),
-                activeRequestId: this.context.globalState.get<string | null>(this.ACTIVE_REQ_KEY, null)
+                activeRequestId: this.context.globalState.get<string | null>(this.getActiveReqKey(activeWorkspaceId), null)
             });
             
-            const environments = EnvironmentService.getEnvironments(this.context);
-            const activeEnvironmentId = EnvironmentService.getActiveEnvironmentId(this.context);
+            const environments = EnvironmentService.getEnvironments(this.context, activeWorkspaceId);
+            const activeEnvironmentId = EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId);
             
             this._view.webview.postMessage({
                 command: 'environmentsUpdated',

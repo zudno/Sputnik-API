@@ -14,62 +14,62 @@ export interface Environment {
 }
 
 export class EnvironmentService {
-    private static readonly GLOBALS_KEY = 'sputnik_globals';
-    private static readonly ENVIRONMENTS_KEY = 'sputnik_environments';
-    private static readonly ACTIVE_ENV_KEY = 'sputnik_active_environment';
+    private static getGlobalsKey(workspaceId: string) { return `sputnik_globals_${workspaceId}`; }
+    private static getEnvironmentsKey(workspaceId: string) { return `sputnik_environments_${workspaceId}`; }
+    private static getActiveEnvKey(workspaceId: string) { return `sputnik_active_environment_${workspaceId}`; }
 
     /**
-     * Recupera las variables globales almacenadas.
+     * Recupera las variables globales almacenadas para el workspace.
      */
-    public static getGlobals(context: vscode.ExtensionContext): EnvironmentVariable[] {
-        return context.globalState.get<EnvironmentVariable[]>(this.GLOBALS_KEY, []);
+    public static getGlobals(context: vscode.ExtensionContext, workspaceId: string): EnvironmentVariable[] {
+        return context.globalState.get<EnvironmentVariable[]>(this.getGlobalsKey(workspaceId), []);
     }
 
     /**
-     * Guarda las variables globales.
+     * Guarda las variables globales para el workspace.
      */
-    public static async saveGlobals(context: vscode.ExtensionContext, variables: EnvironmentVariable[]) {
-        await context.globalState.update(this.GLOBALS_KEY, variables);
+    public static async saveGlobals(context: vscode.ExtensionContext, workspaceId: string, variables: EnvironmentVariable[]) {
+        await context.globalState.update(this.getGlobalsKey(workspaceId), variables);
     }
 
     /**
-     * Recupera la lista de entornos (sin contar Globals).
+     * Recupera la lista de entornos (sin contar Globals) para el workspace.
      */
-    public static getEnvironments(context: vscode.ExtensionContext): Environment[] {
-        return context.globalState.get<Environment[]>(this.ENVIRONMENTS_KEY, []);
+    public static getEnvironments(context: vscode.ExtensionContext, workspaceId: string): Environment[] {
+        return context.globalState.get<Environment[]>(this.getEnvironmentsKey(workspaceId), []);
     }
 
     /**
-     * Guarda la lista de entornos.
+     * Guarda la lista de entornos para el workspace.
      */
-    public static async saveEnvironments(context: vscode.ExtensionContext, environments: Environment[]) {
-        await context.globalState.update(this.ENVIRONMENTS_KEY, environments);
+    public static async saveEnvironments(context: vscode.ExtensionContext, workspaceId: string, environments: Environment[]) {
+        await context.globalState.update(this.getEnvironmentsKey(workspaceId), environments);
     }
 
     /**
-     * Obtiene el ID del entorno activo actual.
+     * Obtiene el ID del entorno activo actual para el workspace.
      */
-    public static getActiveEnvironmentId(context: vscode.ExtensionContext): string | null {
-        return context.globalState.get<string | null>(this.ACTIVE_ENV_KEY, null);
+    public static getActiveEnvironmentId(context: vscode.ExtensionContext, workspaceId: string): string | null {
+        return context.globalState.get<string | null>(this.getActiveEnvKey(workspaceId), null);
     }
 
     /**
-     * Establece el ID del entorno activo actual.
+     * Establece el ID del entorno activo actual para el workspace.
      */
-    public static async setActiveEnvironmentId(context: vscode.ExtensionContext, id: string | null) {
-        await context.globalState.update(this.ACTIVE_ENV_KEY, id);
+    public static async setActiveEnvironmentId(context: vscode.ExtensionContext, workspaceId: string, id: string | null) {
+        await context.globalState.update(this.getActiveEnvKey(workspaceId), id);
     }
 
     /**
      * Devuelve las variables combinadas: El Entorno Activo tiene prioridad sobre Globals.
      */
-    public static getCombinedVariables(context: vscode.ExtensionContext): EnvironmentVariable[] {
-        const globals = this.getGlobals(context);
-        const activeId = this.getActiveEnvironmentId(context);
+    public static getCombinedVariables(context: vscode.ExtensionContext, workspaceId: string): EnvironmentVariable[] {
+        const globals = this.getGlobals(context, workspaceId);
+        const activeId = this.getActiveEnvironmentId(context, workspaceId);
         
         let activeVars: EnvironmentVariable[] = [];
         if (activeId) {
-            const envs = this.getEnvironments(context);
+            const envs = this.getEnvironments(context, workspaceId);
             const activeEnv = envs.find(e => e.id === activeId);
             if (activeEnv) {
                 activeVars = activeEnv.variables;

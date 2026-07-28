@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ApiService, RequestData } from '../services/ApiService';
 import { SidebarProvider } from '../providers/SidebarProvider';
 import { EnvironmentService } from '../services/EnvironmentService';
+import { WorkspaceService } from '../services/WorkspaceService';
 
 /**
  * Clase que gestiona el ciclo de vida y la comunicación del Webview del Cliente REST.
@@ -101,8 +102,9 @@ export class RestClientPanel {
                 if (message.command === 'sendRequest') {
                     const rawRequestData = message.data as RequestData;
                     
+                    const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(context);
                     // Obtener variables combinadas (Globals + Entorno Activo)
-                    const combinedVars = EnvironmentService.getCombinedVariables(context);
+                    const combinedVars = EnvironmentService.getCombinedVariables(context, activeWorkspaceId);
                     
                     // Interpolar URL, Headers y Body
                     const requestData: RequestData = {
@@ -152,11 +154,12 @@ export class RestClientPanel {
                         this.updatePanelTitle(message.requestId, message.name);
                     }
                 } else if (message.command === 'saveEnvironment') {
+                    const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(context);
                     if (message.data.id === 'Globals' || message.data.name === 'Globals') {
-                        await EnvironmentService.saveGlobals(context, message.data.variables);
+                        await EnvironmentService.saveGlobals(context, activeWorkspaceId, message.data.variables);
                         vscode.window.showInformationMessage('Variables Globales guardadas correctamente.');
                     } else if (message.data.id) {
-                        const environments = EnvironmentService.getEnvironments(context);
+                        const environments = EnvironmentService.getEnvironments(context, activeWorkspaceId);
                         const envIndex = environments.findIndex(e => e.id === message.data.id);
                         if (envIndex !== -1) {
                             environments[envIndex].variables = message.data.variables;
@@ -164,7 +167,7 @@ export class RestClientPanel {
                             if (message.data.name) {
                                 environments[envIndex].name = message.data.name;
                             }
-                            await EnvironmentService.saveEnvironments(context, environments);
+                            await EnvironmentService.saveEnvironments(context, activeWorkspaceId, environments);
                             vscode.window.showInformationMessage(`Entorno '${message.data.name}' guardado correctamente.`);
                             if (this.sidebarProvider) {
                                 this.sidebarProvider.sendStateToWebview();
@@ -173,17 +176,19 @@ export class RestClientPanel {
                     }
                 } else if (message.command === 'renameEnvironmentFromPanel') {
                     if (this.sidebarProvider) {
-                        const environments = EnvironmentService.getEnvironments(context);
+                        const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(context);
+                        const environments = EnvironmentService.getEnvironments(context, activeWorkspaceId);
                         const env = environments.find(e => e.id === message.id);
                         if (env) {
                             env.name = message.name;
-                            await EnvironmentService.saveEnvironments(context, environments);
+                            await EnvironmentService.saveEnvironments(context, activeWorkspaceId, environments);
                             this.sidebarProvider.sendStateToWebview();
                         }
                     }
                 } else if (message.command === 'setActiveEnvironment') {
                     if (this.sidebarProvider) {
-                        await EnvironmentService.setActiveEnvironmentId(context, message.id);
+                        const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(context);
+                        await EnvironmentService.setActiveEnvironmentId(context, activeWorkspaceId, message.id);
                         this.sidebarProvider.sendStateToWebview();
                     }
                 }

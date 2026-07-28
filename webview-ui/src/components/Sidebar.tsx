@@ -24,6 +24,8 @@ export function Sidebar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
 
   const handleDragStart = (id: string) => setDraggedRequestId(id);
   const handleDragEnd = () => {
@@ -68,6 +70,16 @@ export function Sidebar() {
         }
       } else if (message.command === 'setActiveRequest') {
         setActiveRequestId(message.id);
+      } else if (message.command === 'workspacesUpdated') {
+        if (message.workspaces !== undefined) {
+          setWorkspaces(message.workspaces);
+        }
+        if (message.activeWorkspaceId !== undefined) {
+          setActiveWorkspaceId(message.activeWorkspaceId);
+          // Opcional: cuando cambia el workspace, limpiamos la selección actual
+          setActiveRequestId(null);
+          setActiveEnvironmentId(null);
+        }
       }
     };
 
@@ -126,8 +138,10 @@ export function Sidebar() {
           className={`flex items-center justify-between w-full bg-[#1e1e1e] border ${isWorkspaceDropdownOpen ? 'border-[#454545] rounded-t' : 'border-[#2b2d2e] rounded'} px-3 py-1.5 cursor-pointer hover:bg-[#2a2d2e] transition-colors`}
           onClick={() => setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen)}
         >
-          <span className="text-[13px] text-[#cccccc]">Test Workspace</span>
-          <ChevronRight size={14} className={`transition-transform text-gray-400 ${isWorkspaceDropdownOpen ? '-rotate-90' : 'rotate-90'}`} />
+          <span className="text-[13px] text-[#cccccc] truncate pr-2">
+            {workspaces.find(w => w.id === activeWorkspaceId)?.name || 'Loading Workspace...'}
+          </span>
+          <ChevronRight size={14} className={`shrink-0 transition-transform text-gray-400 ${isWorkspaceDropdownOpen ? '-rotate-90' : 'rotate-90'}`} />
         </div>
         
         {isWorkspaceDropdownOpen && (
@@ -153,31 +167,32 @@ export function Sidebar() {
               </button>
             </div>
             
-            <div className="flex flex-col py-1 border-t border-[#2b2d2e]">
-              <div className="px-3 py-1.5 text-[11px] font-semibold text-[#cccccc]">Recently Visited</div>
-              <div className="flex items-center px-3 py-1.5 hover:bg-[#2a2d2e] cursor-pointer group transition-colors">
-                <div className="w-7 h-7 flex items-center justify-center shrink-0 bg-[#2a2d2e] rounded-md">
-                  <Lock size={14} className="text-[#e0e0e0]" />
-                </div>
-                <span className="text-[13px] font-semibold text-[#e0e0e0] ml-2">Advan</span>
-              </div>
+            <div className="flex flex-col py-1 border-t border-[#2b2d2e] max-h-[300px] overflow-y-auto">
+              <div className="px-3 py-1.5 text-[11px] font-semibold text-[#cccccc]">Your Workspaces</div>
               
-              <div className="flex items-center px-3 py-1.5 hover:bg-[#2a2d2e] cursor-pointer group transition-colors">
-                <div className="w-7 h-7 flex items-center justify-center shrink-0">
-                  <Lock size={14} className="text-gray-500 group-hover:text-gray-400 transition-colors" />
-                </div>
-                <span className="text-[13px] text-[#cccccc] ml-2">Test Workspace</span>
-              </div>
-
-              <div className="flex items-center px-3 py-1.5 hover:bg-[#2a2d2e] cursor-pointer group transition-colors">
-                <div className="w-7 h-7 flex items-center justify-center shrink-0">
-                  <Lock size={14} className="text-gray-500 group-hover:text-gray-400 transition-colors" />
-                </div>
-                <span className="text-[13px] text-[#cccccc] ml-2">FitCore</span>
-              </div>
-              
-              <div className="px-3 py-1.5 mt-2 text-[11px] font-semibold text-[#cccccc]">More Workspaces</div>
-              <div className="px-3 py-2 text-[12px] text-gray-400">No workspaces found</div>
+              {workspaces.length > 0 ? (
+                workspaces.map(w => (
+                  <div 
+                    key={w.id}
+                    className={`flex items-center px-3 py-1.5 hover:bg-[#2a2d2e] cursor-pointer group transition-colors ${w.id === activeWorkspaceId ? 'bg-[#37373d]' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      vscode.postMessage({ command: 'setActiveWorkspace', id: w.id });
+                      setIsWorkspaceDropdownOpen(false);
+                    }}
+                  >
+                    <div className={`w-7 h-7 flex items-center justify-center shrink-0 rounded-md ${w.id === activeWorkspaceId ? 'bg-[#2a2d2e]' : ''}`}>
+                      <Lock size={14} className={w.id === activeWorkspaceId ? "text-[#e0e0e0]" : "text-gray-500 group-hover:text-gray-400 transition-colors"} />
+                    </div>
+                    <span className={`text-[13px] ml-2 truncate ${w.id === activeWorkspaceId ? 'font-semibold text-[#e0e0e0]' : 'text-[#cccccc]'}`}>
+                      {w.name}
+                    </span>
+                    {w.id === activeWorkspaceId && <Check size={14} className="ml-auto text-gray-400" />}
+                  </div>
+                ))
+              ) : (
+                <div className="px-3 py-2 text-[12px] text-gray-400">No workspaces found</div>
+              )}
             </div>
           </div>
         )}
@@ -318,8 +333,7 @@ export function Sidebar() {
         <CreateWorkspaceModal 
           onClose={() => setIsCreateModalOpen(false)}
           onCreate={(name, type) => {
-            console.log('Create workspace:', name, type);
-            // Here you will eventually send a message to the extension host to create the workspace
+            vscode.postMessage({ command: 'createWorkspace', name, type });
             setIsCreateModalOpen(false);
           }}
         />
