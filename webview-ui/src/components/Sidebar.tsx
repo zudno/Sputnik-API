@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { vscode } from '../utils/vscode';
-import { Plus, ChevronRight, MoreHorizontal, Archive, LayoutTemplate, History, Check, Search, Folder as FolderIcon } from 'lucide-react';
+import { Plus, ChevronRight, MoreHorizontal, Archive, LayoutTemplate, History, Check, Search, Folder as FolderIcon, Lock } from 'lucide-react';
 import { Dropdown } from './ui/Dropdown';
+import { CreateWorkspaceModal } from './CreateWorkspaceModal';
 
 interface DragState {
   draggedRequestId: string | null;
@@ -21,6 +22,8 @@ export function Sidebar() {
   const [draggedRequestId, setDraggedRequestId] = useState<string | null>(null);
   const [dragOverInfo, setDragOverInfo] = useState<{ id: string, position: 'top' | 'bottom' | 'inside' } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const handleDragStart = (id: string) => setDraggedRequestId(id);
   const handleDragEnd = () => {
@@ -117,7 +120,68 @@ export function Sidebar() {
   );
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden text-[#cccccc] text-[13px] select-none">
+    <div className="flex flex-col h-screen overflow-hidden text-[#cccccc] text-[13px] select-none bg-[var(--vscode-sideBar-background)]">
+      <div className="px-3 pt-3 shrink-0 relative z-50">
+        <div 
+          className={`flex items-center justify-between w-full bg-[#1e1e1e] border ${isWorkspaceDropdownOpen ? 'border-[#454545] rounded-t' : 'border-[#2b2d2e] rounded'} px-3 py-1.5 cursor-pointer hover:bg-[#2a2d2e] transition-colors`}
+          onClick={() => setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen)}
+        >
+          <span className="text-[13px] text-[#cccccc]">Test Workspace</span>
+          <ChevronRight size={14} className={`transition-transform text-gray-400 ${isWorkspaceDropdownOpen ? '-rotate-90' : 'rotate-90'}`} />
+        </div>
+        
+        {isWorkspaceDropdownOpen && (
+          <div className="absolute top-[calc(100%-1px)] left-3 right-3 bg-[#1e1e1e] border border-[#454545] rounded-b shadow-2xl flex flex-col z-50 overflow-hidden">
+            <div className="p-2 flex gap-2 items-center">
+              <div className="flex-1 flex items-center h-[28px] bg-[#1e1e1e] border border-[#2b2d2e] rounded focus-within:border-[#007fd4] transition-colors px-2">
+                <input 
+                  type="text" 
+                  placeholder="Search Workspaces" 
+                  className="bg-transparent text-[#cccccc] text-[12px] outline-none w-full border-none p-0 m-0"
+                  autoFocus
+                />
+              </div>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsWorkspaceDropdownOpen(false);
+                  setIsCreateModalOpen(true);
+                }}
+                className="w-[28px] h-[28px] flex items-center justify-center shrink-0 bg-[#2a2d2e] hover:bg-[#3c3e40] rounded text-[#cccccc] border-none cursor-pointer transition-colors"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+            
+            <div className="flex flex-col py-1 border-t border-[#2b2d2e]">
+              <div className="px-3 py-1.5 text-[11px] font-semibold text-[#cccccc]">Recently Visited</div>
+              <div className="flex items-center px-3 py-1.5 hover:bg-[#2a2d2e] cursor-pointer group transition-colors">
+                <div className="w-7 h-7 flex items-center justify-center shrink-0 bg-[#2a2d2e] rounded-md">
+                  <Lock size={14} className="text-[#e0e0e0]" />
+                </div>
+                <span className="text-[13px] font-semibold text-[#e0e0e0] ml-2">Advan</span>
+              </div>
+              
+              <div className="flex items-center px-3 py-1.5 hover:bg-[#2a2d2e] cursor-pointer group transition-colors">
+                <div className="w-7 h-7 flex items-center justify-center shrink-0">
+                  <Lock size={14} className="text-gray-500 group-hover:text-gray-400 transition-colors" />
+                </div>
+                <span className="text-[13px] text-[#cccccc] ml-2">Test Workspace</span>
+              </div>
+
+              <div className="flex items-center px-3 py-1.5 hover:bg-[#2a2d2e] cursor-pointer group transition-colors">
+                <div className="w-7 h-7 flex items-center justify-center shrink-0">
+                  <Lock size={14} className="text-gray-500 group-hover:text-gray-400 transition-colors" />
+                </div>
+                <span className="text-[13px] text-[#cccccc] ml-2">FitCore</span>
+              </div>
+              
+              <div className="px-3 py-1.5 mt-2 text-[11px] font-semibold text-[#cccccc]">More Workspaces</div>
+              <div className="px-3 py-2 text-[12px] text-gray-400">No workspaces found</div>
+            </div>
+          </div>
+        )}
+      </div>
       <div className="px-3 py-3 shrink-0">
         <div className="flex w-full bg-transparent border border-[#2b2d2e] rounded h-[32px] overflow-hidden">
           <button
@@ -248,6 +312,17 @@ export function Sidebar() {
             )}
           </div>
         </>
+      )}
+
+      {isCreateModalOpen && (
+        <CreateWorkspaceModal 
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreate={(name, type) => {
+            console.log('Create workspace:', name, type);
+            // Here you will eventually send a message to the extension host to create the workspace
+            setIsCreateModalOpen(false);
+          }}
+        />
       )}
     </div>
   );
