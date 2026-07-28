@@ -189,38 +189,7 @@ export function Sidebar() {
             <div className="h-[1px] bg-[#2b2d2e] mx-4 my-1"></div>
 
             {environments.map(env => (
-              <div 
-                key={env.id}
-                className={`flex justify-between items-center py-2 px-4 hover:bg-[#2a2d2e] group cursor-pointer transition-colors ${activeEnvironmentId === env.id ? 'bg-[#37373d]' : ''}`}
-                onClick={() => {
-                  vscode.postMessage({ command: 'openEnvironment', name: env.name, id: env.id });
-                  vscode.postMessage({ command: 'setActiveEnvironment', id: env.id });
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] text-[#cccccc] truncate">{env.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="invisible group-hover:visible">
-                    <Dropdown
-                      align="end"
-                      trigger={
-                        <button 
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-6 h-6 flex items-center justify-center hover:bg-[#3c3e40] rounded text-gray-400 hover:text-white transition-colors outline-none border-none bg-transparent cursor-pointer"
-                        >
-                          <MoreHorizontal size={16} />
-                        </button>
-                      }
-                      items={[
-                        { label: 'Rename', onClick: (e) => { e?.stopPropagation(); vscode.postMessage({ command: 'renameEnvironment', id: env.id }); } },
-                        { label: 'Delete', onClick: (e) => { e?.stopPropagation(); vscode.postMessage({ command: 'deleteEnvironment', id: env.id }); }, danger: true }
-                      ]}
-                    />
-                  </div>
-                  {activeEnvironmentId === env.id && <Check size={16} className="text-gray-400" />}
-                </div>
-              </div>
+              <EnvironmentItem key={env.id} env={env} activeEnvironmentId={activeEnvironmentId} />
             ))}
 
             {environments.length === 0 && (
@@ -235,8 +204,88 @@ export function Sidebar() {
   );
 }
 
+function EnvironmentItem({ env, activeEnvironmentId }: { env: any, activeEnvironmentId: string | null }) {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(env.name);
+
+  const handleRenameClick = (e: any) => {
+    if (e?.stopPropagation) e.stopPropagation();
+    setIsRenaming(true);
+    setRenameValue(env.name);
+  };
+
+  const submitRename = () => {
+    setIsRenaming(false);
+    if (renameValue.trim() && renameValue !== env.name) {
+       vscode.postMessage({ command: 'renameEnvironmentInline', id: env.id, name: renameValue.trim() });
+    }
+  };
+
+  const cancelRename = () => {
+    setIsRenaming(false);
+    setRenameValue(env.name);
+  };
+
+  return (
+    <div 
+      className={`flex justify-between items-center py-2 px-4 hover:bg-[#2a2d2e] group cursor-pointer transition-colors ${activeEnvironmentId === env.id ? 'bg-[#37373d]' : ''}`}
+      onClick={() => {
+        if (isRenaming) return;
+        vscode.postMessage({ command: 'openEnvironment', name: env.name, id: env.id });
+        vscode.postMessage({ command: 'setActiveEnvironment', id: env.id });
+      }}
+    >
+      <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap flex-1 pr-2">
+        {isRenaming ? (
+          <input 
+            type="text"
+            autoFocus
+            className="bg-[#1e1e1e] text-white border border-[#454545] px-1 text-[13px] outline-none w-full"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onBlur={submitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submitRename();
+              if (e.key === 'Escape') cancelRename();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onFocus={(e) => e.target.select()}
+          />
+        ) : (
+          <span className="text-[13px] text-[#cccccc] truncate">{env.name}</span>
+        )}
+      </div>
+      
+      {!isRenaming && (
+        <div className="flex items-center gap-2">
+          <div className="invisible group-hover:visible">
+            <Dropdown
+              align="end"
+              trigger={
+                <button 
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-6 h-6 flex items-center justify-center hover:bg-[#3c3e40] rounded text-gray-400 hover:text-white transition-colors outline-none border-none bg-transparent cursor-pointer"
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+              }
+              items={[
+                { label: 'Rename', onClick: handleRenameClick },
+                { label: 'Delete', onClick: (e) => { e?.stopPropagation(); vscode.postMessage({ command: 'deleteEnvironment', id: env.id }); }, danger: true }
+              ]}
+            />
+          </div>
+          {activeEnvironmentId === env.id && <Check size={16} className="text-gray-400" />}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CollectionItem({ collection, activeRequestId, dragState }: { collection: any, activeRequestId?: string | null, dragState: DragState }) {
   const [expanded, setExpanded] = useState(collection.expanded ?? true);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(collection.name);
 
   const toggleExpanded = () => {
     const newExpanded = !expanded;
@@ -249,9 +298,22 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
     vscode.postMessage({ command: 'deleteCollection', id: collection.id });
   };
 
-  const handleRename = (e: any) => {
+  const handleRenameClick = (e: any) => {
     if (e?.stopPropagation) e.stopPropagation();
-    vscode.postMessage({ command: 'renameCollection', id: collection.id });
+    setIsRenaming(true);
+    setRenameValue(collection.name);
+  };
+
+  const submitRename = () => {
+    setIsRenaming(false);
+    if (renameValue.trim() && renameValue !== collection.name) {
+       vscode.postMessage({ command: 'renameCollectionInline', id: collection.id, name: renameValue.trim() });
+    }
+  };
+
+  const cancelRename = () => {
+    setIsRenaming(false);
+    setRenameValue(collection.name);
   };
 
   const handleAddRequest = (e: any) => {
@@ -265,9 +327,26 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
         className="flex justify-between items-center py-1 px-3 hover:bg-[#2a2d2e] group cursor-pointer transition-colors" 
         onClick={toggleExpanded}
       >
-        <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+        <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap flex-1 pr-2">
           <ChevronRight size={14} className={`transition-transform ${expanded ? 'rotate-90' : ''}`} />
-          <span className="truncate">{collection.name}</span>
+          {isRenaming ? (
+            <input 
+              type="text"
+              autoFocus
+              className="bg-[#1e1e1e] text-white border border-[#454545] px-1 text-[13px] outline-none w-full"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={submitRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitRename();
+                if (e.key === 'Escape') cancelRename();
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onFocus={(e) => e.target.select()}
+            />
+          ) : (
+            <span className="truncate">{collection.name}</span>
+          )}
         </div>
         
         <div className="flex items-center gap-0.5">
@@ -289,7 +368,7 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
               </button>
             }
             items={[
-              { label: 'Rename', onClick: handleRename },
+              { label: 'Rename', onClick: handleRenameClick },
               { label: 'Delete', onClick: handleDelete, danger: true }
             ]}
           />
@@ -329,6 +408,8 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
 
 function RequestItem({ request, collectionId, activeRequestId, dragState }: { request: any, collectionId: string, activeRequestId?: string | null, dragState: DragState }) {
   const isActive = request.id === activeRequestId;
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(request.name);
 
   const getMethodColor = (m: string) => {
     switch(m.toUpperCase()) {
@@ -359,9 +440,22 @@ function RequestItem({ request, collectionId, activeRequestId, dragState }: { re
     vscode.postMessage({ command: 'deleteRequest', collectionId, requestId: request.id });
   };
 
-  const handleRename = (e: any) => {
+  const handleRenameClick = (e: any) => {
     if (e?.stopPropagation) e.stopPropagation();
-    vscode.postMessage({ command: 'renameRequest', collectionId, requestId: request.id });
+    setIsRenaming(true);
+    setRenameValue(request.name);
+  };
+
+  const submitRename = () => {
+    setIsRenaming(false);
+    if (renameValue.trim() && renameValue !== request.name) {
+       vscode.postMessage({ command: 'renameRequestInline', collectionId, requestId: request.id, name: renameValue.trim() });
+    }
+  };
+
+  const cancelRename = () => {
+    setIsRenaming(false);
+    setRenameValue(request.name);
   };
 
   const method = request.requestData?.method || 'GET';
@@ -396,11 +490,28 @@ function RequestItem({ request, collectionId, activeRequestId, dragState }: { re
       {dragState.dragOverInfo?.id === request.id && dragState.dragOverInfo?.position === 'bottom' && (
           <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500 z-10 pointer-events-none" />
       )}
-      <div className="flex items-center gap-1 overflow-hidden whitespace-nowrap">
-        <span className={`text-[9px] font-semibold w-[26px] ${getMethodColor(method)}`}>
+      <div className="flex items-center gap-1 overflow-hidden whitespace-nowrap flex-1 pr-2">
+        <span className={`text-[9px] font-semibold w-[26px] shrink-0 ${getMethodColor(method)}`}>
           {formatMethod(method)}
         </span>
-        <span className="truncate">{request.name}</span>
+        {isRenaming ? (
+          <input 
+            type="text"
+            autoFocus
+            className="bg-[#1e1e1e] text-white border border-[#454545] px-1 text-[13px] outline-none w-full"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onBlur={submitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submitRename();
+              if (e.key === 'Escape') cancelRename();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onFocus={(e) => e.target.select()}
+          />
+        ) : (
+          <span className="truncate">{request.name}</span>
+        )}
       </div>
       
       <div className="flex items-center">
@@ -415,7 +526,7 @@ function RequestItem({ request, collectionId, activeRequestId, dragState }: { re
             </button>
           }
           items={[
-            { label: 'Rename', onClick: handleRename },
+            { label: 'Rename', onClick: handleRenameClick },
             { label: 'Delete', onClick: handleDelete, danger: true }
           ]}
         />

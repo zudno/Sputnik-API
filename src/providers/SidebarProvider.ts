@@ -103,6 +103,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
                     break;
                 }
+                case 'renameEnvironmentInline': {
+                    const environments = EnvironmentService.getEnvironments(this.context);
+                    const env = environments.find(e => e.id === data.id);
+                    if (env && data.name && data.name !== env.name) {
+                        env.name = data.name;
+                        await EnvironmentService.saveEnvironments(this.context, environments);
+                        this.sendStateToWebview();
+                    }
+                    break;
+                }
                 case 'setActiveEnvironment': {
                     await EnvironmentService.setActiveEnvironmentId(this.context, data.id);
                     this.sendStateToWebview();
@@ -129,6 +139,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             col.name = newName;
                             await this.saveCollections(collections);
                         }
+                    }
+                    break;
+                }
+                case 'renameCollectionInline': {
+                    const collections = this.getCollections();
+                    const col = collections.find(c => c.id === data.id);
+                    if (col && data.name && data.name !== col.name) {
+                        col.name = data.name;
+                        await this.saveCollections(collections);
                     }
                     break;
                 }
@@ -197,6 +216,19 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                 await this.saveCollections(collections);
                                 RestClientPanel.updatePanelTitle(req.id, newName);
                             }
+                        }
+                    }
+                    break;
+                }
+                case 'renameRequestInline': {
+                    const collections = this.getCollections();
+                    const col = collections.find(c => c.id === data.collectionId);
+                    if (col) {
+                        const req = col.requests.find(r => r.id === data.requestId);
+                        if (req && data.name && data.name !== req.name) {
+                            req.name = data.name;
+                            await this.saveCollections(collections);
+                            RestClientPanel.updatePanelTitle(req.id, data.name);
                         }
                     }
                     break;
