@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { vscode } from '../utils/vscode';
-import { Plus, ChevronRight, MoreHorizontal, Archive, LayoutTemplate, History, Check } from 'lucide-react';
+import { Plus, ChevronRight, MoreHorizontal, Archive, LayoutTemplate, History, Check, Search } from 'lucide-react';
 import { Dropdown } from './ui/Dropdown';
 
 interface DragState {
@@ -20,6 +20,7 @@ export function Sidebar() {
   const [activeEnvironmentId, setActiveEnvironmentId] = useState<string | null>(null);
   const [draggedRequestId, setDraggedRequestId] = useState<string | null>(null);
   const [dragOverInfo, setDragOverInfo] = useState<{ id: string, position: 'top' | 'bottom' | 'inside' } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleDragStart = (id: string) => setDraggedRequestId(id);
   const handleDragEnd = () => {
@@ -95,6 +96,26 @@ export function Sidebar() {
     vscode.postMessage({ command: 'addCollection', name: 'New Collection' });
   };
 
+  const filteredCollections = collections.map(c => {
+    if (!searchQuery) return c;
+    const query = searchQuery.toLowerCase();
+    const matchesCollection = c.name.toLowerCase().includes(query);
+    const matchedRequests = c.requests.filter((r: any) => r.name.toLowerCase().includes(query));
+    
+    if (matchesCollection || matchedRequests.length > 0) {
+      return { 
+        ...c, 
+        requests: !matchesCollection && matchedRequests.length > 0 ? matchedRequests : c.requests,
+        forceExpand: true
+      };
+    }
+    return null;
+  }).filter(Boolean);
+
+  const filteredEnvironments = environments.filter(env => 
+    !searchQuery || env.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="flex flex-col h-screen overflow-hidden text-[#cccccc] text-[13px] select-none">
       <div className="px-3 py-3 shrink-0">
@@ -144,8 +165,20 @@ export function Sidebar() {
               <Plus size={16} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto">
-            {collections.map(c => (
+          <div className="px-3 py-2 shrink-0">
+            <div className="flex items-center gap-2 bg-[#1e1e1e] border border-[#2b2d2e] rounded px-2 py-1.5 focus-within:border-[#007fd4] transition-colors">
+              <Search size={14} className="text-gray-400 shrink-0" />
+              <input 
+                type="text"
+                placeholder="Search collections"
+                className="bg-transparent text-[#cccccc] text-[12px] outline-none w-full border-none p-0 m-0"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto pb-4">
+            {filteredCollections.map(c => (
               <CollectionItem 
                 key={c.id} 
                 collection={c} 
@@ -172,9 +205,23 @@ export function Sidebar() {
               <Plus size={16} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto">
-            <div 
-              className={`flex justify-between items-center py-2 px-4 hover:bg-[#2a2d2e] cursor-pointer transition-colors ${!activeEnvironmentId ? 'bg-[#37373d]' : ''}`}
+          <div className="px-3 py-2 shrink-0">
+            <div className="flex items-center gap-2 bg-[#1e1e1e] border border-[#2b2d2e] rounded px-2 py-1.5 focus-within:border-[#007fd4] transition-colors">
+              <Search size={14} className="text-gray-400 shrink-0" />
+              <input 
+                type="text"
+                placeholder="Search environments"
+                className="bg-transparent text-[#cccccc] text-[12px] outline-none w-full border-none p-0 m-0"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto pb-4">
+            {(!searchQuery || 'globals'.includes(searchQuery.toLowerCase())) && (
+              <>
+                <div 
+                  className={`flex justify-between items-center py-2 px-4 hover:bg-[#2a2d2e] cursor-pointer transition-colors ${!activeEnvironmentId ? 'bg-[#37373d]' : ''}`}
               onClick={() => {
                 vscode.postMessage({ command: 'openEnvironment', name: 'Globals', id: 'Globals' });
                 vscode.postMessage({ command: 'setActiveEnvironment', id: null });
@@ -187,8 +234,10 @@ export function Sidebar() {
             </div>
             
             <div className="h-[1px] bg-[#2b2d2e] mx-4 my-1"></div>
+            </>
+            )}
 
-            {environments.map(env => (
+            {filteredEnvironments.map(env => (
               <EnvironmentItem key={env.id} env={env} activeEnvironmentId={activeEnvironmentId} />
             ))}
 
@@ -287,7 +336,10 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(collection.name);
 
+  const isExpanded = collection.forceExpand ? true : expanded;
+
   const toggleExpanded = () => {
+    if (collection.forceExpand) return; // Disallow toggling when forced by search
     const newExpanded = !expanded;
     setExpanded(newExpanded);
     vscode.postMessage({ command: 'toggleCollectionExpanded', id: collection.id, expanded: newExpanded });
@@ -328,7 +380,7 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
         onClick={toggleExpanded}
       >
         <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap flex-1 pr-2">
-          <ChevronRight size={14} className={`transition-transform ${expanded ? 'rotate-90' : ''}`} />
+          <ChevronRight size={14} className={`transition-transform ${isExpanded ? 'rotate-90' : ''} ${collection.forceExpand ? 'opacity-50' : ''}`} />
           {isRenaming ? (
             <input 
               type="text"
@@ -375,7 +427,7 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
         </div>
       </div>
       
-      {expanded && (
+      {isExpanded && (
         <div className="flex flex-col relative">
           {/* Vertical guideline */}
           <div className="absolute left-[20px] top-0 bottom-0 w-[1px] bg-[#3a3d3e] z-10 pointer-events-none"></div>
