@@ -64,8 +64,8 @@ function MainPanel() {
   const initialData = vscodeData.initialData || {};
 
   const [view, setView] = useState<'request' | 'environment'>(initialView);
-  const [environmentName, setEnvironmentName] = useState<string>('Globals');
-  const [environmentId, setEnvironmentId] = useState<string>('Globals');
+  const [environmentName, setEnvironmentName] = useState<string>(initialData.name || 'Globals');
+  const [environmentId, setEnvironmentId] = useState<string>(initialData.id || 'Globals');
   
   const [method, setMethod] = useState(initialData.requestData?.method || "GET");
   const [url, setUrl] = useState(initialData.requestData?.url || "");

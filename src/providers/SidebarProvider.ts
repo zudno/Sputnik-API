@@ -307,12 +307,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     
                     if (data.name === 'Globals' || !data.id) {
                         const variables = EnvironmentService.getGlobals(this.context);
-                        initialData = { variables, id: 'Globals' };
+                        initialData = { variables, id: 'Globals', name: 'Globals' };
                     } else {
                         const environments = EnvironmentService.getEnvironments(this.context);
                         const env = environments.find(e => e.id === data.id);
                         if (env) {
-                            initialData = { variables: env.variables, id: env.id };
+                            initialData = { variables: env.variables, id: env.id, name: env.name };
                         }
                     }
                     

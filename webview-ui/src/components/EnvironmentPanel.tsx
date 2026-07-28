@@ -90,36 +90,29 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
     <div className="flex flex-col h-full bg-vsc-editor-bg text-vsc-foreground px-4 pt-3 pb-1">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center text-[13px] h-[28px]">
-          <span className="text-blue-400 font-semibold mr-2">ENV</span>
           {environmentId === 'Globals' ? (
              <div className="inline-grid items-center">
                <span className="px-1.5 py-0.5 font-semibold text-white">Globals</span>
              </div>
           ) : (
-            <>
-              <button className="text-neutral-500 font-normal hover:bg-[#2a2d2e] hover:text-gray-200 px-1.5 py-0.5 rounded cursor-pointer outline-none border-none bg-transparent m-0 transition-colors">
-                Environments
-              </button>
-              <span className="text-neutral-500 font-normal mx-2">/</span>
-              <div className="inline-grid items-center">
-                <span className="invisible whitespace-pre px-1.5 py-0.5 font-semibold col-start-1 row-start-1 pointer-events-none min-w-[1ch] border-2 border-transparent">
-                  {name || ''}
-                </span>
-                <input 
-                  value={name || ''} 
-                  size={1}
-                  onChange={e => setName(e.target.value)}
-                  onBlur={handleRename}
-                  onFocus={e => e.target.select()}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  className="bg-transparent border-2 border-transparent focus:border-[#007fd4] focus:bg-transparent text-white outline-none cursor-text hover:bg-[#2a2d2e] px-1.5 py-0.5 rounded font-semibold w-full min-w-0 col-start-1 row-start-1 m-0 leading-tight transition-colors" 
-                />
-              </div>
-            </>
+            <div className="inline-grid items-center">
+              <span className="invisible whitespace-pre px-1.5 py-0.5 font-semibold col-start-1 row-start-1 pointer-events-none min-w-[1ch] border-2 border-transparent">
+                {name || ''}
+              </span>
+              <input 
+                value={name || ''} 
+                size={1}
+                onChange={e => setName(e.target.value)}
+                onBlur={handleRename}
+                onFocus={e => e.target.select()}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                  }
+                }}
+                className="bg-transparent border-2 border-transparent focus:border-[#007fd4] focus:bg-transparent text-white outline-none cursor-text hover:bg-[#2a2d2e] px-1.5 py-0.5 rounded font-semibold w-full min-w-0 col-start-1 row-start-1 m-0 leading-tight transition-colors" 
+              />
+            </div>
           )}
         </div>
         
