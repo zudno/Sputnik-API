@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Collection, SavedRequest } from '../models/Collections';
+import { Collection, CollectionItem } from '../models/Collections';
 import * as crypto from 'crypto';
 import { RestClientPanel } from '../panels/RestClientPanel';
 import { EnvironmentService } from '../services/EnvironmentService';
@@ -31,19 +31,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const activeReqId = this.context.globalState.get<string | null>(this.ACTIVE_REQ_KEY, null);
         if (activeReqId) {
             const collections = this.getCollections();
-            for (const col of collections) {
-                const req = col.requests.find(r => r.id === activeReqId);
-                if (req) {
-                    const initialData = { 
-                        requestData: req.requestData, 
-                        meta: { name: req.name, collectionId: col.id, collectionName: col.name, requestId: req.id },
-                        environments: EnvironmentService.getEnvironments(this.context),
-                        activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context)
-                    };
-                    RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
-                    RestClientPanel.loadRequest(req.requestData, req.name, col.id, col.name, req.id);
-                    break;
-                }
+            const result = this.findNode(activeReqId, collections);
+            if (result && (result.item as CollectionItem).type === 'request') {
+                const req = result.item as CollectionItem;
+                const rootCollection = this.getRootCollection(collections, req.id) || req;
+                const initialData = { 
+                    requestData: req.requestData!, 
+                    meta: { name: req.name, collectionId: rootCollection.id, collectionName: rootCollection.name, requestId: req.id },
+                    environments: EnvironmentService.getEnvironments(this.context),
+                    activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context)
+                };
+                RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
+                RestClientPanel.loadRequest(req.requestData!, req.name, rootCollection.id, rootCollection.name, req.id);
             }
         }
 
@@ -58,7 +57,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     collections.push({
                         id: crypto.randomUUID(),
                         name: data.name,
-                        requests: []
+                        items: []
                     });
                     await this.saveCollections(collections);
                     break;
@@ -151,12 +150,31 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
                     break;
                 }
+                case 'addFolder': {
+                    const collections = this.getCollections();
+                    const result = this.findNode(data.parentId, collections);
+                    if (result && 'items' in result.item) {
+                        result.item.items = result.item.items || [];
+                        result.item.items.push({
+                            id: crypto.randomUUID(),
+                            type: 'folder',
+                            name: data.name,
+                            items: []
+                        });
+                        if ('expanded' in result.item) {
+                            result.item.expanded = true; // Auto expand parent
+                        }
+                        await this.saveCollections(collections);
+                    }
+                    break;
+                }
                 case 'addRequest': {
                     const collections = this.getCollections();
-                    const col = collections.find(c => c.id === data.collectionId);
-                    if (col) {
-                        const newReq = {
+                    const result = this.findNode(data.parentId, collections);
+                    if (result && 'items' in result.item) {
+                        const newReq: CollectionItem = {
                             id: crypto.randomUUID(),
+                            type: 'request',
                             name: data.name,
                             requestData: {
                                 url: '',
@@ -165,87 +183,98 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                 body: ''
                             }
                         };
-                        col.requests.push(newReq);
+                        result.item.items = result.item.items || [];
+                        result.item.items.push(newReq);
+                        
+                        if ('expanded' in result.item) {
+                            result.item.expanded = true;
+                        }
                         await this.saveCollections(collections);
+                        
+                        const rootCollection = this.getRootCollection(collections, result.item.id) || result.item;
+                        
                         const initialData = { 
-                            requestData: newReq.requestData, 
-                            meta: { name: newReq.name, collectionId: col.id, collectionName: col.name, requestId: newReq.id },
+                            requestData: newReq.requestData!, 
+                            meta: { name: newReq.name, collectionId: rootCollection.id, collectionName: rootCollection.name, requestId: newReq.id },
                             environments: EnvironmentService.getEnvironments(this.context),
                             activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context)
                         };
                         RestClientPanel.render(this.context, newReq.id, newReq.name, 'request', initialData);
-                        RestClientPanel.loadRequest(newReq.requestData, newReq.name, col.id, col.name, newReq.id);
+                        RestClientPanel.loadRequest(newReq.requestData!, newReq.name, rootCollection.id, rootCollection.name, newReq.id);
                         await this.context.globalState.update(this.ACTIVE_REQ_KEY, newReq.id);
                         this._view?.webview.postMessage({ command: 'setActiveRequest', id: newReq.id });
                     }
                     break;
                 }
-                case 'toggleCollectionExpanded': {
+                case 'toggleItemExpanded': {
                     const collections = this.getCollections();
-                    const col = collections.find(c => c.id === data.id);
-                    if (col) {
-                        col.expanded = data.expanded;
+                    const result = this.findNode(data.id, collections);
+                    if (result && 'expanded' in result.item) {
+                        result.item.expanded = data.expanded;
                         await this.saveCollections(collections);
                     }
                     break;
                 }
-                case 'deleteRequest': {
+                case 'deleteItem': {
                     const collections = this.getCollections();
-                    const col = collections.find(c => c.id === data.collectionId);
-                    if (col) {
-                        const reqToDelete = col.requests.find(r => r.id === data.requestId);
-                        if (reqToDelete) {
-                            const answer = await vscode.window.showWarningMessage(`¿Eliminar petición '${reqToDelete.name}'?`, { modal: true }, 'Sí', 'No');
-                            if (answer === 'Sí') {
-                                col.requests = col.requests.filter(r => r.id !== data.requestId);
+                    const result = this.findNode(data.id, collections);
+                    if (result && result.parent) {
+                        const answer = await vscode.window.showWarningMessage(`¿Eliminar '${result.item.name}'?`, { modal: true }, 'Sí', 'No');
+                        if (answer === 'Sí') {
+                            if ('items' in result.parent && result.parent.items) {
+                                result.parent.items.splice(result.index, 1);
                                 await this.saveCollections(collections);
                             }
                         }
                     }
                     break;
                 }
-                case 'renameRequest': {
+                case 'renameItem': {
                     const collections = this.getCollections();
-                    const col = collections.find(c => c.id === data.collectionId);
-                    if (col) {
-                        const req = col.requests.find(r => r.id === data.requestId);
-                        if (req) {
-                            const newName = await vscode.window.showInputBox({ prompt: 'Nuevo nombre de la petición:', value: req.name });
-                            if (newName && newName !== req.name) {
-                                req.name = newName;
-                                await this.saveCollections(collections);
-                                RestClientPanel.updatePanelTitle(req.id, newName);
-                            }
-                        }
-                    }
-                    break;
-                }
-                case 'renameRequestInline': {
-                    const collections = this.getCollections();
-                    const col = collections.find(c => c.id === data.collectionId);
-                    if (col) {
-                        const req = col.requests.find(r => r.id === data.requestId);
-                        if (req && data.name && data.name !== req.name) {
-                            req.name = data.name;
+                    const result = this.findNode(data.id, collections);
+                    if (result) {
+                        const newName = await vscode.window.showInputBox({ prompt: 'Nuevo nombre:', value: result.item.name });
+                        if (newName && newName !== result.item.name) {
+                            result.item.name = newName;
                             await this.saveCollections(collections);
-                            RestClientPanel.updatePanelTitle(req.id, data.name);
+                            if ((result.item as CollectionItem).type === 'request') {
+                                RestClientPanel.updatePanelTitle(result.item.id, newName);
+                            }
                         }
                     }
                     break;
                 }
-                case 'moveRequest': {
+                case 'renameItemInline': {
                     const collections = this.getCollections();
-                    const sourceCol = collections.find(c => c.id === data.sourceCollectionId);
-                    const targetCol = collections.find(c => c.id === data.targetCollectionId);
+                    const result = this.findNode(data.id, collections);
+                    if (result && data.name && data.name !== result.item.name) {
+                        result.item.name = data.name;
+                        await this.saveCollections(collections);
+                        if ((result.item as CollectionItem).type === 'request') {
+                            RestClientPanel.updatePanelTitle(result.item.id, data.name);
+                        }
+                    }
+                    break;
+                }
+                case 'moveItem': {
+                    const collections = this.getCollections();
+                    const sourceResult = this.findNode(data.sourceId, collections);
                     
-                    if (sourceCol && targetCol) {
-                        const reqIndex = sourceCol.requests.findIndex(r => r.id === data.requestId);
-                        if (reqIndex !== -1) {
-                            const [req] = sourceCol.requests.splice(reqIndex, 1);
-                            if (data.targetIndex !== undefined) {
-                                targetCol.requests.splice(data.targetIndex, 0, req);
+                    if (sourceResult && sourceResult.parent && 'items' in sourceResult.parent) {
+                        const [itemToMove] = sourceResult.parent.items!.splice(sourceResult.index, 1);
+                        
+                        const targetResult = this.findNode(data.targetId, collections);
+                        if (targetResult) {
+                            if (data.position === 'inside') {
+                                if ('items' in targetResult.item) {
+                                    targetResult.item.items = targetResult.item.items || [];
+                                    targetResult.item.items.push(itemToMove);
+                                }
                             } else {
-                                targetCol.requests.push(req);
+                                if (targetResult.parent && 'items' in targetResult.parent) {
+                                    const insertIndex = data.position === 'top' ? targetResult.index : targetResult.index + 1;
+                                    targetResult.parent.items!.splice(insertIndex, 0, itemToMove);
+                                }
                             }
                             await this.saveCollections(collections);
                         }
@@ -254,21 +283,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 }
                 case 'openRequest': {
                     const collections = this.getCollections();
-                    const col = collections.find(c => c.id === data.collectionId);
-                    if (col) {
-                        const req = col.requests.find(r => r.id === data.requestId);
-                        if (req) {
-                            const initialData = { 
-                                requestData: req.requestData, 
-                                meta: { name: req.name, collectionId: col.id, collectionName: col.name, requestId: req.id },
-                                environments: EnvironmentService.getEnvironments(this.context),
-                                activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context)
-                            };
-                            RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
-                            RestClientPanel.loadRequest(req.requestData, req.name, col.id, col.name, req.id);
-                            await this.context.globalState.update(this.ACTIVE_REQ_KEY, req.id);
-                            this._view?.webview.postMessage({ command: 'setActiveRequest', id: req.id });
-                        }
+                    const result = this.findNode(data.id, collections);
+                    if (result && (result.item as CollectionItem).type === 'request') {
+                        const req = result.item as CollectionItem;
+                        const rootCollection = this.getRootCollection(collections, req.id) || req;
+                        const initialData = { 
+                            requestData: req.requestData!, 
+                            meta: { name: req.name, collectionId: rootCollection.id, collectionName: rootCollection.name, requestId: req.id },
+                            environments: EnvironmentService.getEnvironments(this.context),
+                            activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context)
+                        };
+                        RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
+                        RestClientPanel.loadRequest(req.requestData!, req.name, rootCollection.id, rootCollection.name, req.id);
+                        await this.context.globalState.update(this.ACTIVE_REQ_KEY, req.id);
+                        this._view?.webview.postMessage({ command: 'setActiveRequest', id: req.id });
                     }
                     break;
                 }
@@ -301,7 +329,28 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     public getCollections(): Collection[] {
-        return this.context.globalState.get<Collection[]>(this.STATE_KEY, []);
+        const collections = this.context.globalState.get<Collection[]>(this.STATE_KEY, []);
+        let migrated = false;
+        
+        for (const col of collections) {
+            if (col.requests) {
+                col.items = col.requests.map((r: any) => ({
+                    id: r.id,
+                    type: 'request',
+                    name: r.name,
+                    requestData: r.requestData
+                }));
+                delete col.requests;
+                migrated = true;
+            }
+            if (!col.items) col.items = [];
+        }
+        
+        if (migrated) {
+            this.saveCollections(collections);
+        }
+        
+        return collections;
     }
 
     public async saveCollections(collections: Collection[]) {
@@ -309,24 +358,32 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         this.sendStateToWebview();
     }
 
-    public async saveRequestData(collectionId: string, requestId: string, requestData: any) {
+    public async saveRequestData(requestId: string, requestData: any) {
         const collections = this.getCollections();
-        const col = collections.find(c => c.id === collectionId);
-        if (col) {
-            const req = col.requests.find(r => r.id === requestId);
-            if (req) {
-                req.requestData = requestData;
-                await this.saveCollections(collections);
-            }
+        const result = this.findNode(requestId, collections);
+        if (result && (result.item as CollectionItem).type === 'request') {
+            (result.item as CollectionItem).requestData = requestData;
+            await this.saveCollections(collections);
+        }
+    }
+
+    public async renameItem(id: string, newName: string) {
+        const collections = this.getCollections();
+        const result = this.findNode(id, collections);
+        if (result) {
+            result.item.name = newName;
+            await this.saveCollections(collections);
         }
     }
     
-    public async addNewRequest(collectionId: string, name: string, requestData: any) {
+    public async addNewRequest(parentId: string, name: string, requestData: any) {
         const collections = this.getCollections();
-        const col = collections.find(c => c.id === collectionId);
-        if (col) {
-            col.requests.push({
+        const result = this.findNode(parentId, collections);
+        if (result && 'items' in result.item) {
+            result.item.items = result.item.items || [];
+            result.item.items.push({
                 id: crypto.randomUUID(),
+                type: 'request',
                 name,
                 requestData
             });
@@ -372,5 +429,41 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <script type="module" src="${scriptUri}"></script>
         </body>
         </html>`;
+    }
+
+    // Helper functions for tree traversal
+    private findNode(id: string, collections: Collection[]): { item: Collection | CollectionItem, parent: Collection | CollectionItem | null, index: number } | null {
+        for (let i = 0; i < collections.length; i++) {
+            if (collections[i].id === id) {
+                return { item: collections[i], parent: null, index: i };
+            }
+            if (collections[i].items) {
+                const res = this.findNodeInItems(id, collections[i].items!, collections[i]);
+                if (res) return res;
+            }
+        }
+        return null;
+    }
+
+    private findNodeInItems(id: string, items: CollectionItem[], parent: Collection | CollectionItem): { item: CollectionItem, parent: Collection | CollectionItem, index: number } | null {
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].id === id) {
+                return { item: items[i], parent, index: i };
+            }
+            if (items[i].type === 'folder' && items[i].items) {
+                const res = this.findNodeInItems(id, items[i].items!, items[i]);
+                if (res) return res;
+            }
+        }
+        return null;
+    }
+
+    private getRootCollection(collections: Collection[], childId: string): Collection | null {
+        for (const col of collections) {
+            if (col.id === childId || this.findNodeInItems(childId, col.items || [], col)) {
+                return col;
+            }
+        }
+        return null;
     }
 }

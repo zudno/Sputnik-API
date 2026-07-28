@@ -148,16 +148,8 @@ export class RestClientPanel {
                     }
                 } else if (message.command === 'renameRequestFromPanel') {
                     if (this.sidebarProvider) {
-                        const collections = this.sidebarProvider.getCollections();
-                        const col = collections.find(c => c.id === message.collectionId);
-                        if (col) {
-                            const req = col.requests.find(r => r.id === message.requestId);
-                            if (req) {
-                                req.name = message.name;
-                                await this.sidebarProvider.saveCollections(collections);
-                                this.updatePanelTitle(message.requestId, message.name);
-                            }
-                        }
+                        await this.sidebarProvider.renameItem(message.requestId, message.name);
+                        this.updatePanelTitle(message.requestId, message.name);
                     }
                 } else if (message.command === 'saveEnvironment') {
                     if (message.data.id === 'Globals' || message.data.name === 'Globals') {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { vscode } from '../utils/vscode';
-import { Plus, ChevronRight, MoreHorizontal, Archive, LayoutTemplate, History, Check, Search } from 'lucide-react';
+import { Plus, ChevronRight, MoreHorizontal, Archive, LayoutTemplate, History, Check, Search, Folder as FolderIcon } from 'lucide-react';
 import { Dropdown } from './ui/Dropdown';
 
 interface DragState {
@@ -9,7 +9,7 @@ interface DragState {
   handleDragStart: (id: string) => void;
   handleDragEnd: () => void;
   handleDragOver: (id: string, position: 'top' | 'bottom' | 'inside') => void;
-  handleDrop: (targetId: string, position: 'top' | 'bottom' | 'inside', targetCollectionId: string) => void;
+  handleDrop: (targetId: string, position: 'top' | 'bottom' | 'inside') => void;
 }
 
 export function Sidebar() {
@@ -30,29 +30,13 @@ export function Sidebar() {
   const handleDragOver = (id: string, position: 'top' | 'bottom' | 'inside') => {
     setDragOverInfo({ id, position });
   };
-  const handleDrop = (targetId: string, position: 'top' | 'bottom' | 'inside', targetCollectionId: string) => {
+  const handleDrop = (targetId: string, position: 'top' | 'bottom' | 'inside') => {
     if (draggedRequestId && draggedRequestId !== targetId) {
-      let targetIndex = undefined;
-      const targetCol = collections.find(c => c.id === targetCollectionId);
-      if (targetCol && position !== 'inside') {
-          const idx = targetCol.requests.findIndex((r: any) => r.id === targetId);
-          if (idx !== -1) {
-              targetIndex = position === 'top' ? idx : idx + 1;
-          }
-      }
-      let sourceCollectionId = '';
-      for (const col of collections) {
-          if (col.requests.some((r: any) => r.id === draggedRequestId)) {
-              sourceCollectionId = col.id;
-              break;
-          }
-      }
       vscode.postMessage({ 
-        command: 'moveRequest', 
-        requestId: draggedRequestId, 
-        sourceCollectionId, 
-        targetCollectionId, 
-        targetIndex 
+        command: 'moveItem', 
+        sourceId: draggedRequestId, 
+        targetId, 
+        position 
       });
     }
     handleDragEnd();
@@ -96,16 +80,32 @@ export function Sidebar() {
     vscode.postMessage({ command: 'addCollection', name: 'New Collection' });
   };
 
+  const filterNodes = (items: any[], query: string): any[] => {
+    if (!query) return items;
+    return items.map(item => {
+      if (item.type === 'request') {
+        return item.name.toLowerCase().includes(query.toLowerCase()) ? item : null;
+      } else {
+        const matchedItems = filterNodes(item.items || [], query);
+        const matchesName = item.name.toLowerCase().includes(query.toLowerCase());
+        if (matchesName || matchedItems.length > 0) {
+          return { ...item, items: !matchesName && matchedItems.length > 0 ? matchedItems : item.items, forceExpand: true };
+        }
+        return null;
+      }
+    }).filter(Boolean);
+  };
+
   const filteredCollections = collections.map(c => {
     if (!searchQuery) return c;
     const query = searchQuery.toLowerCase();
+    const matchedItems = filterNodes(c.items || [], query);
     const matchesCollection = c.name.toLowerCase().includes(query);
-    const matchedRequests = c.requests.filter((r: any) => r.name.toLowerCase().includes(query));
     
-    if (matchesCollection || matchedRequests.length > 0) {
+    if (matchesCollection || matchedItems.length > 0) {
       return { 
         ...c, 
-        requests: !matchesCollection && matchedRequests.length > 0 ? matchedRequests : c.requests,
+        items: !matchesCollection && matchedItems.length > 0 ? matchedItems : c.items,
         forceExpand: true
       };
     }
@@ -331,6 +331,8 @@ function EnvironmentItem({ env, activeEnvironmentId }: { env: any, activeEnviron
   );
 }
 
+
+
 function CollectionItem({ collection, activeRequestId, dragState }: { collection: any, activeRequestId?: string | null, dragState: DragState }) {
   const [expanded, setExpanded] = useState(collection.expanded ?? true);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -339,10 +341,10 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
   const isExpanded = collection.forceExpand ? true : expanded;
 
   const toggleExpanded = () => {
-    if (collection.forceExpand) return; // Disallow toggling when forced by search
+    if (collection.forceExpand) return;
     const newExpanded = !expanded;
     setExpanded(newExpanded);
-    vscode.postMessage({ command: 'toggleCollectionExpanded', id: collection.id, expanded: newExpanded });
+    vscode.postMessage({ command: 'toggleItemExpanded', id: collection.id, expanded: newExpanded });
   };
 
   const handleDelete = (e: any) => {
@@ -370,14 +372,21 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
 
   const handleAddRequest = (e: any) => {
     if (e?.stopPropagation) e.stopPropagation();
-    vscode.postMessage({ command: 'addRequest', collectionId: collection.id, name: 'New Request' });
+    vscode.postMessage({ command: 'addRequest', parentId: collection.id, name: 'New Request' });
+  };
+  
+  const handleAddFolder = (e: any) => {
+    if (e?.stopPropagation) e.stopPropagation();
+    vscode.postMessage({ command: 'addFolder', parentId: collection.id, name: 'New Folder' });
   };
 
   return (
     <div className="flex flex-col">
       <div 
-        className="flex justify-between items-center py-1 px-3 hover:bg-[#2a2d2e] group cursor-pointer transition-colors" 
+        className={`flex justify-between items-center py-1 px-3 hover:bg-[#2a2d2e] group cursor-pointer transition-colors ${dragState.dragOverInfo?.id === collection.id && dragState.dragOverInfo?.position === 'inside' ? 'bg-[#2a2d2e] ring-1 ring-orange-500' : ''}`}
         onClick={toggleExpanded}
+        onDragOver={(e) => { e.preventDefault(); dragState.handleDragOver(collection.id, 'inside'); }}
+        onDrop={(e) => { e.preventDefault(); dragState.handleDrop(collection.id, 'inside'); }}
       >
         <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap flex-1 pr-2">
           <ChevronRight size={14} className={`transition-transform ${isExpanded ? 'rotate-90' : ''} ${collection.forceExpand ? 'opacity-50' : ''}`} />
@@ -402,13 +411,6 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
         </div>
         
         <div className="flex items-center gap-0.5">
-          <button 
-            onClick={handleAddRequest}
-            title="Add Request"
-            className="w-6 h-6 flex items-center justify-center hover:bg-[#3c3e40] rounded text-gray-400 hover:text-white invisible group-hover:visible transition-colors outline-none border-none bg-transparent cursor-pointer"
-          >
-            <Plus size={16} />
-          </button>
           <Dropdown
             align="end"
             trigger={
@@ -420,6 +422,8 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
               </button>
             }
             items={[
+              { label: 'Add request', onClick: handleAddRequest },
+              { label: 'Add folder', onClick: handleAddFolder },
               { label: 'Rename', onClick: handleRenameClick },
               { label: 'Delete', onClick: handleDelete, danger: true }
             ]}
@@ -429,17 +433,14 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
       
       {isExpanded && (
         <div className="flex flex-col relative">
-          {/* Vertical guideline */}
           <div className="absolute left-[20px] top-0 bottom-0 w-[1px] bg-[#3a3d3e] z-10 pointer-events-none"></div>
-          {collection.requests && collection.requests.length > 0 ? (
-            collection.requests.map((r: any) => (
-               <RequestItem key={r.id} request={r} collectionId={collection.id} activeRequestId={activeRequestId} dragState={dragState} />
+          {collection.items && collection.items.length > 0 ? (
+            collection.items.map((item: any) => (
+               <SidebarItemNode key={item.id} item={item} depth={1} activeRequestId={activeRequestId} dragState={dragState} />
             ))
           ) : (
-            <div 
-              className={`flex flex-col py-2 pl-[36px] pr-3 text-gray-400 ${dragState.dragOverInfo?.id === collection.id ? 'bg-[#2a2d2e]' : ''}`}
-              onDragOver={(e) => { e.preventDefault(); dragState.handleDragOver(collection.id, 'inside'); }}
-              onDrop={(e) => { e.preventDefault(); dragState.handleDrop(collection.id, 'inside', collection.id); }}
+             <div 
+              className={`flex flex-col py-2 pl-[36px] pr-3 text-gray-400`}
             >
               <span className="mb-1">This collection is empty</span>
               <span>
@@ -458,7 +459,163 @@ function CollectionItem({ collection, activeRequestId, dragState }: { collection
   );
 }
 
-function RequestItem({ request, collectionId, activeRequestId, dragState }: { request: any, collectionId: string, activeRequestId?: string | null, dragState: DragState }) {
+function SidebarItemNode({ item, depth, activeRequestId, dragState }: { item: any, depth: number, activeRequestId?: string | null, dragState: DragState }) {
+    if (item.type === 'folder') {
+        return <FolderItem folder={item} depth={depth} activeRequestId={activeRequestId} dragState={dragState} />;
+    } else {
+        return <RequestItem request={item} depth={depth} activeRequestId={activeRequestId} dragState={dragState} />;
+    }
+}
+
+function FolderItem({ folder, depth, activeRequestId, dragState }: { folder: any, depth: number, activeRequestId?: string | null, dragState: DragState }) {
+  const [expanded, setExpanded] = useState(folder.expanded ?? false);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(folder.name);
+
+  const isExpanded = folder.forceExpand ? true : expanded;
+
+  const toggleExpanded = () => {
+    if (folder.forceExpand) return;
+    const newExpanded = !expanded;
+    setExpanded(newExpanded);
+    vscode.postMessage({ command: 'toggleItemExpanded', id: folder.id, expanded: newExpanded });
+  };
+
+  const handleDelete = (e: any) => {
+    if (e?.stopPropagation) e.stopPropagation();
+    vscode.postMessage({ command: 'deleteItem', id: folder.id });
+  };
+
+  const handleRenameClick = (e: any) => {
+    if (e?.stopPropagation) e.stopPropagation();
+    setIsRenaming(true);
+    setRenameValue(folder.name);
+  };
+
+  const submitRename = () => {
+    setIsRenaming(false);
+    if (renameValue.trim() && renameValue !== folder.name) {
+       vscode.postMessage({ command: 'renameItemInline', id: folder.id, name: renameValue.trim() });
+    }
+  };
+
+  const cancelRename = () => {
+    setIsRenaming(false);
+    setRenameValue(folder.name);
+  };
+
+  const handleAddRequest = (e: any) => {
+    if (e?.stopPropagation) e.stopPropagation();
+    vscode.postMessage({ command: 'addRequest', parentId: folder.id, name: 'New Request' });
+  };
+  
+  const handleAddFolder = (e: any) => {
+    if (e?.stopPropagation) e.stopPropagation();
+    vscode.postMessage({ command: 'addFolder', parentId: folder.id, name: 'New Folder' });
+  };
+
+  const paddingLeft = 16 + depth * 16;
+  const isDragOverTop = dragState.dragOverInfo?.id === folder.id && dragState.dragOverInfo?.position === 'top';
+  const isDragOverBottom = dragState.dragOverInfo?.id === folder.id && dragState.dragOverInfo?.position === 'bottom';
+  const isDragOverInside = dragState.dragOverInfo?.id === folder.id && dragState.dragOverInfo?.position === 'inside';
+
+  return (
+    <div className="flex flex-col relative">
+      <div 
+        draggable
+        onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            dragState.handleDragStart(folder.id);
+        }}
+        onDragEnd={() => dragState.handleDragEnd()}
+        onDragOver={(e) => {
+            e.preventDefault();
+            const rect = e.currentTarget.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            let position: 'top' | 'bottom' | 'inside' = 'inside';
+            if (y < rect.height * 0.25) position = 'top';
+            else if (y > rect.height * 0.75) position = 'bottom';
+            dragState.handleDragOver(folder.id, position);
+        }}
+        onDrop={(e) => {
+            e.preventDefault();
+            if (dragState.dragOverInfo) {
+                dragState.handleDrop(folder.id, dragState.dragOverInfo.position);
+            }
+        }}
+        className={`flex justify-between items-center py-1 pr-3 group cursor-pointer transition-colors relative z-0 w-full ${isDragOverInside ? 'bg-[#2a2d2e] ring-1 ring-orange-500' : 'hover:bg-[#2a2d2e]'} ${dragState.draggedRequestId === folder.id ? 'opacity-50' : ''}`}
+        style={{ paddingLeft: `${paddingLeft}px` }}
+        onClick={toggleExpanded}
+      >
+        {isDragOverTop && (
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-orange-500 z-10 pointer-events-none" />
+        )}
+        {isDragOverBottom && (
+            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500 z-10 pointer-events-none" />
+        )}
+        <div className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap flex-1 pr-2">
+          <ChevronRight size={14} className={`shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''} ${folder.forceExpand ? 'opacity-50' : ''}`} />
+          <FolderIcon size={13} className="text-gray-400 shrink-0" />
+          {isRenaming ? (
+            <input 
+              type="text"
+              autoFocus
+              className="bg-[#1e1e1e] text-white border border-[#454545] px-1 text-[13px] outline-none w-full"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={submitRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitRename();
+                if (e.key === 'Escape') cancelRename();
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onFocus={(e) => e.target.select()}
+            />
+          ) : (
+            <span className="truncate">{folder.name}</span>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-0.5">
+          <Dropdown
+            align="end"
+            trigger={
+              <button 
+                onClick={(e) => e.stopPropagation()}
+                className="w-6 h-6 flex items-center justify-center hover:bg-[#3c3e40] rounded text-gray-400 hover:text-white invisible group-hover:visible transition-colors outline-none border-none bg-transparent cursor-pointer"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+            }
+            items={[
+              { label: 'Add request', onClick: handleAddRequest },
+              { label: 'Add folder', onClick: handleAddFolder },
+              { label: 'Rename', onClick: handleRenameClick },
+              { label: 'Delete', onClick: handleDelete, danger: true }
+            ]}
+          />
+        </div>
+      </div>
+      
+      {isExpanded && (
+        <div className="flex flex-col relative">
+          <div className="absolute top-0 bottom-0 w-[1px] bg-[#3a3d3e] z-10 pointer-events-none" style={{ left: `${paddingLeft + 6}px` }}></div>
+          {folder.items && folder.items.length > 0 ? (
+            folder.items.map((item: any) => (
+               <SidebarItemNode key={item.id} item={item} depth={depth + 1} activeRequestId={activeRequestId} dragState={dragState} />
+            ))
+          ) : (
+             <div className="py-1 text-gray-500 text-[12px] italic" style={{ paddingLeft: `${paddingLeft + 24}px` }}>
+                 Empty folder
+             </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RequestItem({ request, depth, activeRequestId, dragState }: { request: any, depth: number, activeRequestId?: string | null, dragState: DragState }) {
   const isActive = request.id === activeRequestId;
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(request.name);
@@ -482,14 +639,13 @@ function RequestItem({ request, collectionId, activeRequestId, dragState }: { re
   const handleOpen = () => {
     vscode.postMessage({ 
       command: 'openRequest', 
-      collectionId, 
-      requestId: request.id 
+      id: request.id 
     });
   };
 
   const handleDelete = (e: any) => {
     if (e?.stopPropagation) e.stopPropagation();
-    vscode.postMessage({ command: 'deleteRequest', collectionId, requestId: request.id });
+    vscode.postMessage({ command: 'deleteItem', id: request.id });
   };
 
   const handleRenameClick = (e: any) => {
@@ -501,7 +657,7 @@ function RequestItem({ request, collectionId, activeRequestId, dragState }: { re
   const submitRename = () => {
     setIsRenaming(false);
     if (renameValue.trim() && renameValue !== request.name) {
-       vscode.postMessage({ command: 'renameRequestInline', collectionId, requestId: request.id, name: renameValue.trim() });
+       vscode.postMessage({ command: 'renameItemInline', id: request.id, name: renameValue.trim() });
     }
   };
 
@@ -511,6 +667,9 @@ function RequestItem({ request, collectionId, activeRequestId, dragState }: { re
   };
 
   const method = request.requestData?.method || 'GET';
+  const paddingLeft = 16 + depth * 16;
+  const isDragOverTop = dragState.dragOverInfo?.id === request.id && dragState.dragOverInfo?.position === 'top';
+  const isDragOverBottom = dragState.dragOverInfo?.id === request.id && dragState.dragOverInfo?.position === 'bottom';
 
   return (
     <div 
@@ -530,16 +689,17 @@ function RequestItem({ request, collectionId, activeRequestId, dragState }: { re
       onDrop={(e) => {
           e.preventDefault();
           if (dragState.dragOverInfo) {
-              dragState.handleDrop(request.id, dragState.dragOverInfo.position, collectionId);
+              dragState.handleDrop(request.id, dragState.dragOverInfo.position);
           }
       }}
-      className={`flex justify-between items-center py-1 pl-[36px] pr-3 group cursor-pointer transition-colors relative z-0 w-full ${isActive ? 'bg-[#37373d]' : 'hover:bg-[#2a2d2e]'} ${dragState.draggedRequestId === request.id ? 'opacity-50' : ''}`}
+      className={`flex justify-between items-center py-1 pr-3 group cursor-pointer transition-colors relative z-0 w-full ${isActive ? 'bg-[#37373d]' : 'hover:bg-[#2a2d2e]'} ${dragState.draggedRequestId === request.id ? 'opacity-50' : ''}`}
+      style={{ paddingLeft: `${paddingLeft}px` }}
       onClick={handleOpen}
     >
-      {dragState.dragOverInfo?.id === request.id && dragState.dragOverInfo?.position === 'top' && (
+      {isDragOverTop && (
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-orange-500 z-10 pointer-events-none" />
       )}
-      {dragState.dragOverInfo?.id === request.id && dragState.dragOverInfo?.position === 'bottom' && (
+      {isDragOverBottom && (
           <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500 z-10 pointer-events-none" />
       )}
       <div className="flex items-center gap-1 overflow-hidden whitespace-nowrap flex-1 pr-2">

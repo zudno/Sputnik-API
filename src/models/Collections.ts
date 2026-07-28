@@ -9,12 +9,29 @@ export interface SavedRequest {
     requestData: RequestData;
 }
 
+export type ItemType = 'folder' | 'request';
+
+export interface CollectionItem {
+    id: string;
+    type: ItemType;
+    name: string;
+    
+    // For folders
+    expanded?: boolean;
+    items?: CollectionItem[];
+    
+    // For requests
+    requestData?: RequestData;
+}
+
 /**
- * Representa una colección (carpeta) que puede contener peticiones guardadas.
+ * Representa una colección (carpeta raíz) que puede contener elementos.
  */
 export interface Collection {
     id: string;
     name: string;
-    requests: SavedRequest[];
+    items: CollectionItem[];
     expanded?: boolean;
+    // Legacy support (optional)
+    requests?: any[];
 }
