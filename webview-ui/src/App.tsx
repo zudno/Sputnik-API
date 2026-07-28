@@ -162,21 +162,23 @@ function MainPanel() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden text-vsc-foreground bg-vsc-editor-bg">
-      <div className="px-4 pt-3 pb-2 flex-shrink-0 flex flex-col gap-4">
-        <div className="flex justify-between items-center w-full">
+      <div className="flex-shrink-0 flex flex-col">
+        <div className="flex justify-between items-center w-full px-4 py-2 border-b border-vsc-panel-border">
           <Breadcrumb requestMeta={requestMeta} setRequestMeta={setRequestMeta} />
           <EnvironmentSelector environments={environments} activeEnvironmentId={activeEnvironmentId} />
         </div>
         
-        <RequestPanel 
-          method={method} 
-          setMethod={setMethod} 
-          url={url} 
-          setUrl={setUrl} 
-          loading={loading} 
-          onSend={handleSend} 
-          onSave={handleSave}
-        />
+        <div className="px-4 pt-4 pb-2">
+          <RequestPanel 
+            method={method} 
+            setMethod={setMethod} 
+            url={url} 
+            setUrl={setUrl} 
+            loading={loading} 
+            onSend={handleSend} 
+            onSave={handleSave}
+          />
+        </div>
       </div>
 
       <Group orientation="vertical" className="flex-grow">
