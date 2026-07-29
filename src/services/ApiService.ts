@@ -41,12 +41,23 @@ export class ApiService {
             const parsedHeaders = this.parseHeaders(headers);
             const startTime = Date.now();
             
+            let finalData: any = undefined;
+            if (method !== 'GET' && method !== 'HEAD' && body) {
+                try {
+                    // Si el body es un string JSON válido, lo parseamos a objeto
+                    // para que axios lo serialice correctamente y no haga un doble stringify.
+                    finalData = JSON.parse(body);
+                } catch (e) {
+                    // Si falla, enviamos el string crudo (útil para texto plano, XML, etc.)
+                    finalData = body;
+                }
+            }
+
             const response: AxiosResponse = await axios({
                 method: method,
                 url: url,
                 headers: parsedHeaders,
-                // Evitamos enviar body en GET/HEAD
-                data: (method !== 'GET' && method !== 'HEAD' && body) ? body : undefined,
+                data: finalData,
                 validateStatus: () => true // Permite capturar códigos 4xx o 5xx sin lanzar error
             });
             

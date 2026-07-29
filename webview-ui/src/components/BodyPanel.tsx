@@ -1,5 +1,5 @@
 import Editor from '@monaco-editor/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Dropdown } from './ui/Dropdown';
 
@@ -14,6 +14,8 @@ interface BodyPanelProps {
 
 export function BodyPanel({ body, setBody, bodyType, setBodyType, rawBodyType, setRawBodyType }: BodyPanelProps) {
   const [editorInstance, setEditorInstance] = useState<any>(null);
+  const [monacoInstance, setMonacoInstance] = useState<any>(null);
+  const decorationsRef = useRef<any>(null);
 
   useEffect(() => {
     if (!editorInstance) return;
@@ -76,9 +78,38 @@ export function BodyPanel({ body, setBody, bodyType, setBodyType, rawBodyType, s
     };
   }, [editorInstance]);
 
-  const handleEditorDidMount = (editor: any) => {
+  const handleEditorDidMount = (editor: any, monaco: any) => {
     setEditorInstance(editor);
+    setMonacoInstance(monaco);
+    decorationsRef.current = editor.createDecorationsCollection();
   };
+
+  useEffect(() => {
+    if (!editorInstance || !monacoInstance || !decorationsRef.current) return;
+
+    const model = editorInstance.getModel();
+    if (!model) return;
+
+    const text = model.getValue();
+    const regex = /\{\{[^}]+\}\}/g;
+    let match;
+    const newDecorations = [];
+
+    while ((match = regex.exec(text)) !== null) {
+      const startPos = model.getPositionAt(match.index);
+      const endPos = model.getPositionAt(match.index + match[0].length);
+      
+      newDecorations.push({
+        range: new monacoInstance.Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
+        options: {
+          inlineClassName: 'monaco-env-variable',
+          stickiness: 1 // TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+        }
+      });
+    }
+
+    decorationsRef.current.set(newDecorations);
+  }, [body, editorInstance, monacoInstance]);
 
   const languages = [
     { value: 'text', label: 'Text' },
