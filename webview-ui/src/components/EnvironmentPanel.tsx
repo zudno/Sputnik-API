@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { vscode } from "../utils/vscode";
 import { GripVertical, Trash2, Search, Save, Key, Eye, EyeOff } from 'lucide-react';
 
@@ -32,6 +32,7 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
   const [filterText, setFilterText] = useState("");
   const [keyColWidth, setKeyColWidth] = useState(220); // Default wider value column
   const [revealedIds, setRevealedIds] = useState<Record<string, boolean>>({});
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     setName(environmentName);
@@ -47,7 +48,16 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
     } else {
       setVariables([{ id: crypto.randomUUID(), key: '', value: '', enabled: true }]);
     }
+    setIsDirty(false);
   }, [initialVariables]);
+
+  useEffect(() => {
+    vscode.postMessage({
+      command: 'setEnvironmentDirty',
+      id: environmentId,
+      isDirty
+    });
+  }, [isDirty, environmentId]);
 
   const updateVariable = (id: string, field: keyof EnvironmentVariable, value: string | boolean) => {
     const newVars = variables.map(v => {
@@ -63,14 +73,17 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
     }
 
     setVariables(newVars);
+    setIsDirty(true);
   };
 
   const removeVariable = (id: string) => {
     if (variables.length === 1) {
       setVariables([{ id: crypto.randomUUID(), key: '', value: '', enabled: true }]);
+      setIsDirty(true);
       return;
     }
     setVariables(variables.filter(v => v.id !== id));
+    setIsDirty(true);
   };
 
   const handleRename = () => {
@@ -89,7 +102,7 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
     }
   };
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     vscode.postMessage({
       command: 'saveEnvironment',
       data: {
@@ -98,7 +111,19 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
         variables: variables.filter(v => v.key.trim() !== '')
       }
     });
-  };
+    setIsDirty(false);
+  }, [environmentId, name, variables]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
 
   const handleMouseDownOnResizer = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -135,7 +160,10 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
               <input 
                 value={name || ''} 
                 size={1}
-                onChange={e => setName(e.target.value)}
+                onChange={e => {
+                  setName(e.target.value);
+                  setIsDirty(true);
+                }}
                 onBlur={handleRename}
                 onFocus={e => e.target.select()}
                 onKeyDown={e => {
@@ -260,6 +288,7 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
                     setVariables(newVars);
                     setDraggedIndex(null);
                     setDragOverInfo(null);
+                    setIsDirty(true);
                   }}
                   onDragEnd={() => {
                     setDraggedIndex(null);

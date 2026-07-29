@@ -203,6 +203,26 @@ export class RestClientPanel {
                             env.name = message.name;
                             await EnvironmentService.saveEnvironments(context, activeWorkspaceId, environments);
                             this.sidebarProvider.sendStateToWebview();
+                            
+                            const panel = this.panels.get(message.id);
+                            if (panel) {
+                                const hasDirtyMark = panel.title.endsWith(' ●');
+                                panel.title = message.name + (hasDirtyMark ? ' ●' : '');
+                            }
+                        }
+                    }
+                } else if (message.command === 'setEnvironmentDirty') {
+                    const panelId = message.id === 'Globals' ? 'env_Globals' : `env_${message.id}`;
+                    const panel = this.panels.get(panelId);
+                    if (panel) {
+                        let currentTitle = panel.title;
+                        const dirtyMark = ' ●';
+                        const hasDirtyMark = currentTitle.endsWith(dirtyMark);
+                        
+                        if (message.isDirty && !hasDirtyMark) {
+                            panel.title = currentTitle + dirtyMark;
+                        } else if (!message.isDirty && hasDirtyMark) {
+                            panel.title = currentTitle.slice(0, -dirtyMark.length);
                         }
                     }
                 } else if (message.command === 'setActiveEnvironment') {
