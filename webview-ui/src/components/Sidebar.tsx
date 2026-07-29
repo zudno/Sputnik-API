@@ -300,7 +300,7 @@ export function Sidebar() {
             {(!searchQuery || 'globals'.includes(searchQuery.toLowerCase())) && (
               <>
                 <div 
-                  className={`flex justify-between items-center py-2 px-4 hover:bg-[#2a2d2e] cursor-pointer transition-colors ${!activeEnvironmentId ? 'bg-[#37373d]' : ''}`}
+                  className={`flex justify-between items-center py-1.5 px-3 hover:bg-[#2a2d2e] cursor-pointer transition-colors ${!activeEnvironmentId ? 'bg-[#37373d]' : ''}`}
               onClick={() => {
                 vscode.postMessage({ command: 'openEnvironment', name: 'Globals', id: 'Globals' });
                 vscode.postMessage({ command: 'setActiveEnvironment', id: null });
@@ -366,7 +366,7 @@ function EnvironmentItem({ env, activeEnvironmentId }: { env: any, activeEnviron
 
   return (
     <div 
-      className={`flex justify-between items-center py-2 px-4 hover:bg-[#2a2d2e] group cursor-pointer transition-colors ${activeEnvironmentId === env.id ? 'bg-[#37373d]' : ''}`}
+      className={`flex justify-between items-center py-1 px-3 hover:bg-[#2a2d2e] group cursor-pointer transition-colors ${activeEnvironmentId === env.id ? 'bg-[#37373d]' : ''}`}
       onClick={() => {
         if (isRenaming) return;
         vscode.postMessage({ command: 'openEnvironment', name: env.name, id: env.id });
