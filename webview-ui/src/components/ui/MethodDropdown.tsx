@@ -37,7 +37,7 @@ export function MethodDropdown({ method, setMethod }: MethodDropdownProps) {
     <RadixDropdownMenu.Root open={open} onOpenChange={setOpen} modal={false}>
       <RadixDropdownMenu.Trigger asChild>
         <button 
-          className={`flex items-center justify-between w-28 bg-transparent font-bold cursor-pointer outline-none border-none pl-3 pr-3 py-3 h-full focus-visible:ring-1 focus-visible:ring-[#007fd4] ${getMethodColor(method)}`}
+          className={`flex items-center justify-between w-28 bg-transparent font-bold cursor-pointer outline-none border-none pl-3 pr-3 py-2.5 h-full focus-visible:ring-1 focus-visible:ring-[#007fd4] ${getMethodColor(method)}`}
         >
           <span>{method}</span>
           <ChevronDown className="text-gray-400 shrink-0" size={16} />

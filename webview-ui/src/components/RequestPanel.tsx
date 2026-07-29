@@ -37,7 +37,7 @@ function HighlightedInput({ value, onChange, placeholder }: { value: string, onC
       {/* Background layer for highlighted text */}
       <div 
         ref={scrollRef}
-        className="absolute inset-0 px-3 py-3 font-sans whitespace-pre overflow-hidden pointer-events-none"
+        className="absolute inset-0 px-3 py-2.5 font-sans whitespace-pre overflow-hidden pointer-events-none"
         aria-hidden="true"
       >
         {!value && placeholder ? (
@@ -52,7 +52,7 @@ function HighlightedInput({ value, onChange, placeholder }: { value: string, onC
         value={value}
         onChange={e => onChange(e.target.value)}
         onScroll={handleScroll}
-        className="bg-transparent font-sans px-3 py-3 outline-none border-none w-full relative z-10" 
+        className="bg-transparent font-sans px-3 py-2.5 outline-none border-none w-full relative z-10" 
         spellCheck={false}
         style={{ 
           color: 'transparent', 
@@ -76,14 +76,14 @@ export function RequestPanel({ method, setMethod, url, setUrl, loading, onSend, 
         <button 
           onClick={onSend}
           disabled={loading}
-          className="bg-vsc-postman-blue text-white py-3 px-6 font-bold hover:bg-vsc-postman-hover border-none cursor-pointer transition-colors disabled:opacity-50"
+          className="bg-vsc-postman-blue text-white py-2.5 px-6 font-bold hover:bg-vsc-postman-hover border-none cursor-pointer transition-colors disabled:opacity-50"
         >
           {loading ? 'Sending...' : 'Send'}
         </button>
         {onSave && (
           <button 
             onClick={onSave}
-            className="bg-vsc-postman-blue border-l border-[#1a60ad] text-white py-3 px-3 hover:bg-vsc-postman-hover cursor-pointer transition-colors flex items-center justify-center"
+            className="bg-vsc-postman-blue border-l border-[#1a60ad] text-white py-2.5 px-3 hover:bg-vsc-postman-hover cursor-pointer transition-colors flex items-center justify-center"
             title="Save Request"
           >
             <Save size={16} />

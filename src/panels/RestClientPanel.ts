@@ -23,13 +23,14 @@ export class RestClientPanel {
         }
     }
 
-    public static loadRequest(requestData: RequestData, name: string, collectionId: string, collectionName: string, requestId: string) {
+    public static loadRequest(requestData: RequestData, name: string, path: {id: string, name: string}[], requestId: string) {
         const panel = this.panels.get(requestId);
         if (panel) {
+            const rootCollection = path.length > 0 ? path[0] : { id: '', name: '' };
             panel.webview.postMessage({
                 command: 'loadRequest',
                 data: requestData,
-                meta: { name, collectionId, collectionName, requestId }
+                meta: { name, collectionId: rootCollection.id, collectionName: rootCollection.name, path, requestId }
             });
         }
     }
@@ -41,6 +42,25 @@ export class RestClientPanel {
                 environments,
                 activeEnvironmentId
             });
+        });
+    }
+
+    public static updateAllRequestPaths() {
+        if (!this.sidebarProvider) return;
+        const collections = this.sidebarProvider.getCollections();
+        this.panels.forEach((panel, panelId) => {
+            if (!panelId.startsWith('env_')) {
+                const path = this.sidebarProvider!.findNodePath(panelId, collections);
+                if (path) {
+                    const foldersPath = path.slice(0, -1);
+                    const rootCollection = foldersPath.length > 0 ? foldersPath[0] : { id: panelId, name: panel.title };
+                    
+                    panel.webview.postMessage({
+                        command: 'updateMetaPath',
+                        meta: { path: foldersPath, collectionName: rootCollection.name, name: path[path.length - 1].name }
+                    });
+                }
+            }
         });
     }
 

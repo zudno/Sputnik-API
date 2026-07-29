@@ -80,7 +80,7 @@ function MainPanel() {
   const [environments, setEnvironments] = useState<any[]>(initialData.environments || []);
   const [activeEnvironmentId, setActiveEnvironmentId] = useState<string | null>(initialData.activeEnvironmentId || null);
   
-  const [requestMeta, setRequestMeta] = useState<{name?: string, collectionName?: string, collectionId?: string, requestId?: string}>(initialData.meta || {});
+  const [requestMeta, setRequestMeta] = useState<{name?: string, collectionName?: string, collectionId?: string, requestId?: string, path?: {id: string, name: string}[]}>(initialData.meta || {});
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -111,6 +111,13 @@ function MainPanel() {
         if (message.activeEnvironmentId !== undefined) {
           setActiveEnvironmentId(message.activeEnvironmentId);
         }
+      } else if (message.command === 'updateMetaPath') {
+        setRequestMeta(prev => ({
+          ...prev,
+          path: message.meta.path,
+          collectionName: message.meta.collectionName,
+          name: message.meta.name !== undefined ? message.meta.name : prev.name
+        }));
       }
     };
     

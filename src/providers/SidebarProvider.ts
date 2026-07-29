@@ -36,15 +36,17 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             const result = this.findNode(activeReqId, collections);
             if (result && (result.item as CollectionItem).type === 'request') {
                 const req = result.item as CollectionItem;
-                const rootCollection = this.getRootCollection(collections, req.id) || req;
+                const fullPath = this.findNodePath(req.id, collections) || [{ id: req.id, name: req.name }];
+                const foldersPath = fullPath.slice(0, -1);
+                const rootCollection = foldersPath.length > 0 ? foldersPath[0] : { id: req.id, name: req.name };
                 const initialData = { 
                     requestData: req.requestData!, 
-                    meta: { name: req.name, collectionId: rootCollection.id, collectionName: rootCollection.name, requestId: req.id },
+                    meta: { name: req.name, collectionId: rootCollection.id, collectionName: rootCollection.name, path: foldersPath, requestId: req.id },
                     environments: EnvironmentService.getEnvironments(this.context, activeWorkspaceId),
                     activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId)
                 };
                 RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
-                RestClientPanel.loadRequest(req.requestData!, req.name, rootCollection.id, rootCollection.name, req.id);
+                RestClientPanel.loadRequest(req.requestData!, req.name, foldersPath, req.id);
             }
         }
 
@@ -198,17 +200,19 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         }
                         await this.saveCollections(collections);
                         
-                        const rootCollection = this.getRootCollection(collections, result.item.id) || result.item;
+                        const fullPath = this.findNodePath(newReq.id, collections) || [{ id: newReq.id, name: newReq.name }];
+                        const foldersPath = fullPath.slice(0, -1);
+                        const rootCollection = foldersPath.length > 0 ? foldersPath[0] : { id: newReq.id, name: newReq.name };
                         
                         const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
                         const initialData = { 
                             requestData: newReq.requestData!, 
-                            meta: { name: newReq.name, collectionId: rootCollection.id, collectionName: rootCollection.name, requestId: newReq.id },
+                            meta: { name: newReq.name, collectionId: rootCollection.id, collectionName: rootCollection.name, path: foldersPath, requestId: newReq.id },
                             environments: EnvironmentService.getEnvironments(this.context, activeWorkspaceId),
                             activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId)
                         };
                         RestClientPanel.render(this.context, newReq.id, newReq.name, 'request', initialData);
-                        RestClientPanel.loadRequest(newReq.requestData!, newReq.name, rootCollection.id, rootCollection.name, newReq.id);
+                        RestClientPanel.loadRequest(newReq.requestData!, newReq.name, foldersPath, newReq.id);
                         await this.context.globalState.update(this.getActiveReqKey(activeWorkspaceId), newReq.id);
                         this._view?.webview.postMessage({ command: 'setActiveRequest', id: newReq.id });
                     }
@@ -294,16 +298,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     const result = this.findNode(data.id, collections);
                     if (result && (result.item as CollectionItem).type === 'request') {
                         const req = result.item as CollectionItem;
-                        const rootCollection = this.getRootCollection(collections, req.id) || req;
+                        const fullPath = this.findNodePath(req.id, collections) || [{ id: req.id, name: req.name }];
+                        const foldersPath = fullPath.slice(0, -1);
+                        const rootCollection = foldersPath.length > 0 ? foldersPath[0] : { id: req.id, name: req.name };
                         const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
                         const initialData = { 
                             requestData: req.requestData!, 
-                            meta: { name: req.name, collectionId: rootCollection.id, collectionName: rootCollection.name, requestId: req.id },
+                            meta: { name: req.name, collectionId: rootCollection.id, collectionName: rootCollection.name, path: foldersPath, requestId: req.id },
                             environments: EnvironmentService.getEnvironments(this.context, activeWorkspaceId),
                             activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId)
                         };
                         RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
-                        RestClientPanel.loadRequest(req.requestData!, req.name, rootCollection.id, rootCollection.name, req.id);
+                        RestClientPanel.loadRequest(req.requestData!, req.name, foldersPath, req.id);
                         await this.context.globalState.update(this.getActiveReqKey(activeWorkspaceId), req.id);
                         this._view?.webview.postMessage({ command: 'setActiveRequest', id: req.id });
                     }
@@ -379,6 +385,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const activeWorkspaceId = WorkspaceService.getActiveWorkspaceId(this.context);
         await this.context.globalState.update(this.getCollectionsKey(activeWorkspaceId), collections);
         this.sendStateToWebview();
+        RestClientPanel.updateAllRequestPaths();
     }
 
     public async saveRequestData(requestId: string, requestData: any) {
@@ -493,6 +500,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         for (const col of collections) {
             if (col.id === childId || this.findNodeInItems(childId, col.items || [], col)) {
                 return col;
+            }
+        }
+        return null;
+    }
+
+    public findNodePath(id: string, items: any[]): {id: string, name: string}[] | null {
+        for (const item of items) {
+            if (item.id === id) {
+                return [{ id: item.id, name: item.name }];
+            }
+            if (item.items) {
+                const childPath = this.findNodePath(id, item.items);
+                if (childPath) {
+                    return [{ id: item.id, name: item.name }, ...childPath];
+                }
             }
         }
         return null;

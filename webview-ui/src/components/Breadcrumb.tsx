@@ -1,3 +1,4 @@
+import React from "react";
 import { vscode } from "../utils/vscode";
 
 interface BreadcrumbProps {
@@ -6,12 +7,14 @@ interface BreadcrumbProps {
     collectionName?: string;
     collectionId?: string;
     requestId?: string;
+    path?: {id: string, name: string}[];
   };
   setRequestMeta: React.Dispatch<React.SetStateAction<{
     name?: string;
     collectionName?: string;
     collectionId?: string;
     requestId?: string;
+    path?: {id: string, name: string}[];
   }>>;
 }
 
@@ -40,10 +43,23 @@ export function Breadcrumb({ requestMeta, setRequestMeta }: BreadcrumbProps) {
       {requestMeta.collectionName ? (
         <>
           <span className="text-blue-400 font-semibold mr-2">HTTP</span>
-          <button className="text-neutral-500 font-normal hover:bg-[#2a2d2e] hover:text-gray-200 px-1.5 py-0.5 rounded cursor-pointer outline-none">
-            {requestMeta.collectionName}
-          </button>
-          <span className="text-neutral-500 font-normal">/</span>
+          {requestMeta.path && requestMeta.path.length > 0 ? (
+            requestMeta.path.map((item) => (
+              <React.Fragment key={item.id}>
+                <button className="text-neutral-500 font-normal hover:bg-[#2a2d2e] hover:text-gray-200 px-1.5 py-0.5 rounded cursor-pointer outline-none">
+                  {item.name}
+                </button>
+                <span className="text-neutral-500 font-normal">/</span>
+              </React.Fragment>
+            ))
+          ) : (
+            <>
+              <button className="text-neutral-500 font-normal hover:bg-[#2a2d2e] hover:text-gray-200 px-1.5 py-0.5 rounded cursor-pointer outline-none">
+                {requestMeta.collectionName}
+              </button>
+              <span className="text-neutral-500 font-normal">/</span>
+            </>
+          )}
           <div className="inline-grid items-center">
             <span className="invisible whitespace-pre px-1.5 py-0.5 font-semibold col-start-1 row-start-1 pointer-events-none min-w-[1ch] border-2 border-transparent">
               {requestMeta.name || ''}
