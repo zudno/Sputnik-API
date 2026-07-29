@@ -19,7 +19,8 @@ export class RestClientPanel {
     public static updatePanelTitle(requestId: string, newName: string) {
         const panel = this.panels.get(requestId);
         if (panel) {
-            panel.title = newName;
+            const hasDirtyMark = panel.title.endsWith(' ●');
+            panel.title = newName + (hasDirtyMark ? ' ●' : '');
         }
     }
 
@@ -149,6 +150,13 @@ export class RestClientPanel {
                     }
                     
                     const requestData = message.data as RequestData;
+                    
+                    if (message.data.id) {
+                        await this.sidebarProvider.saveRequestData(message.data.id, requestData);
+                        vscode.window.showInformationMessage('Petición guardada.');
+                        return;
+                    }
+                    
                     const collections = this.sidebarProvider.getCollections();
                     
                     if (collections.length === 0) {
@@ -214,6 +222,19 @@ export class RestClientPanel {
                 } else if (message.command === 'setEnvironmentDirty') {
                     const panelId = message.id === 'Globals' ? 'env_Globals' : `env_${message.id}`;
                     const panel = this.panels.get(panelId);
+                    if (panel) {
+                        let currentTitle = panel.title;
+                        const dirtyMark = ' ●';
+                        const hasDirtyMark = currentTitle.endsWith(dirtyMark);
+                        
+                        if (message.isDirty && !hasDirtyMark) {
+                            panel.title = currentTitle + dirtyMark;
+                        } else if (!message.isDirty && hasDirtyMark) {
+                            panel.title = currentTitle.slice(0, -dirtyMark.length);
+                        }
+                    }
+                } else if (message.command === 'setPanelDirty') {
+                    const panel = this.panels.get(message.id);
                     if (panel) {
                         let currentTitle = panel.title;
                         const dirtyMark = ' ●';

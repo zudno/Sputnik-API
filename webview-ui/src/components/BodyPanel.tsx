@@ -6,11 +6,13 @@ import { Dropdown } from './ui/Dropdown';
 interface BodyPanelProps {
   body: string;
   setBody: (body: string) => void;
+  bodyType: string;
+  setBodyType: (val: string) => void;
+  rawBodyType: string;
+  setRawBodyType: (val: string) => void;
 }
 
-export function BodyPanel({ body, setBody }: BodyPanelProps) {
-  const [language, setLanguage] = useState('json');
-  const [bodyType, setBodyType] = useState('raw');
+export function BodyPanel({ body, setBody, bodyType, setBodyType, rawBodyType, setRawBodyType }: BodyPanelProps) {
   const [editorInstance, setEditorInstance] = useState<any>(null);
 
   useEffect(() => {
@@ -86,7 +88,7 @@ export function BodyPanel({ body, setBody }: BodyPanelProps) {
     { value: 'xml', label: 'XML' },
   ];
 
-  const selectedLabel = languages.find(l => l.value === language)?.label || 'JSON';
+  const selectedLabel = languages.find(l => l.value === rawBodyType)?.label || 'JSON';
 
   return (
     <div className="flex flex-col h-full">
@@ -130,7 +132,7 @@ export function BodyPanel({ body, setBody }: BodyPanelProps) {
             }
             items={languages.map(lang => ({
               label: lang.label,
-              onClick: () => setLanguage(lang.value)
+              onClick: () => setRawBodyType(lang.value)
             }))}
           />
         )}
@@ -144,7 +146,7 @@ export function BodyPanel({ body, setBody }: BodyPanelProps) {
         ) : (
           <Editor
             height="100%"
-            language={language}
+            language={rawBodyType}
             theme="vs-dark"
             value={body}
             onChange={(value) => setBody(value || '')}

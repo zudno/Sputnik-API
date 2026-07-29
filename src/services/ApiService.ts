@@ -8,6 +8,8 @@ export interface RequestData {
     method: string;
     headers: string;
     body: string;
+    bodyType?: string;
+    rawBodyType?: string;
 }
 
 /**

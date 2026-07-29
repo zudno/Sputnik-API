@@ -71,6 +71,8 @@ function MainPanel() {
   const [url, setUrl] = useState(initialData.requestData?.url || "");
   const [headers, setHeaders] = useState<HeaderItem[]>(() => parseHeaders(initialData.requestData?.headers || ""));
   const [body, setBody] = useState(initialData.requestData?.body || "");
+  const [bodyType, setBodyType] = useState(initialData.requestData?.bodyType || 'raw');
+  const [rawBodyType, setRawBodyType] = useState(initialData.requestData?.rawBodyType || 'json');
   
   const [initialVariables, setInitialVariables] = useState<any[]>(initialData.variables || []);
   
@@ -81,6 +83,50 @@ function MainPanel() {
   const [activeEnvironmentId, setActiveEnvironmentId] = useState<string | null>(initialData.activeEnvironmentId || null);
   
   const [requestMeta, setRequestMeta] = useState<{name?: string, collectionName?: string, collectionId?: string, requestId?: string, path?: {id: string, name: string}[]}>(initialData.meta || {});
+  
+  const getSerializedHeaders = (headersList: HeaderItem[]) => {
+    return headersList
+      .filter(h => h.enabled && h.key.trim() !== '')
+      .map(h => `${h.key.trim()}: ${h.value}`)
+      .join('\n');
+  };
+
+  const [initialRequestData, setInitialRequestData] = useState(() => {
+    const parsed = parseHeaders(initialData.requestData?.headers || "");
+    return {
+      method: initialData.requestData?.method || "GET",
+      url: initialData.requestData?.url || "",
+      headers: getSerializedHeaders(parsed),
+      body: initialData.requestData?.body || "",
+      bodyType: initialData.requestData?.bodyType || "raw",
+      rawBodyType: initialData.requestData?.rawBodyType || "json"
+    };
+  });
+
+  const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    if (view === 'request') {
+      const currentHeaders = getSerializedHeaders(headers);
+      const dirty = method !== initialRequestData.method ||
+                    url !== initialRequestData.url ||
+                    body !== initialRequestData.body ||
+                    currentHeaders !== initialRequestData.headers ||
+                    bodyType !== initialRequestData.bodyType ||
+                    rawBodyType !== initialRequestData.rawBodyType;
+                    
+      if (dirty !== isDirty) {
+        setIsDirty(dirty);
+        if (requestMeta.requestId) {
+          vscode.postMessage({
+            command: 'setPanelDirty',
+            id: requestMeta.requestId,
+            isDirty: dirty
+          });
+        }
+      }
+    }
+  }, [method, url, body, headers, bodyType, rawBodyType, initialRequestData, isDirty, view, requestMeta.requestId]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -102,8 +148,19 @@ function MainPanel() {
         setMethod(req.method || 'GET');
         setUrl(req.url || '');
         setBody(req.body || '');
-        setHeaders(parseHeaders(req.headers || ''));
+        const parsed = parseHeaders(req.headers || '');
+        setHeaders(parsed);
+        setBodyType(req.bodyType || 'raw');
+        setRawBodyType(req.rawBodyType || 'json');
         setResponse(null); // Clear previous response when loading
+        setInitialRequestData({
+          method: req.method || 'GET',
+          url: req.url || '',
+          headers: getSerializedHeaders(parsed),
+          body: req.body || '',
+          bodyType: req.bodyType || 'raw',
+          rawBodyType: req.rawBodyType || 'json'
+        });
       } else if (message.command === 'environmentsUpdated') {
         if (message.environments !== undefined) {
           setEnvironments(message.environments);
@@ -130,10 +187,7 @@ function MainPanel() {
     setResponse(null);
     
     // Serialize headers to string for backend
-    const headersString = headers
-      .filter(h => h.enabled && h.key.trim() !== '')
-      .map(h => `${h.key.trim()}: ${h.value}`)
-      .join('\n');
+    const headersString = getSerializedHeaders(headers);
 
     vscode.postMessage({
       command: 'sendRequest',
@@ -141,27 +195,51 @@ function MainPanel() {
         method,
         url,
         headers: headersString,
-        body
+        body,
+        bodyType,
+        rawBodyType
       }
     });
   };
 
   const handleSave = () => {
-    const headersString = headers
-      .filter(h => h.enabled && h.key.trim() !== '')
-      .map(h => `${h.key.trim()}: ${h.value}`)
-      .join('\\n');
+    const headersString = getSerializedHeaders(headers);
 
     vscode.postMessage({
       command: 'saveRequest',
       data: {
+        id: requestMeta.requestId,
         method,
         url,
         headers: headersString,
-        body
+        body,
+        bodyType,
+        rawBodyType
       }
     });
+
+    setInitialRequestData({
+      method,
+      url,
+      headers: headersString,
+      body,
+      bodyType,
+      rawBodyType
+    });
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        if (view === 'request') {
+          e.preventDefault();
+          handleSave();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [method, url, headers, body, bodyType, rawBodyType, requestMeta.requestId, view]);
 
   if (view === 'environment') {
     return <EnvironmentPanel environmentId={environmentId} environmentName={environmentName} initialVariables={initialVariables} />;
@@ -196,6 +274,10 @@ function MainPanel() {
               setHeaders={setHeaders}
               body={body}
               setBody={setBody}
+              bodyType={bodyType}
+              setBodyType={setBodyType}
+              rawBodyType={rawBodyType}
+              setRawBodyType={setRawBodyType}
             />
           </div>
         </Panel>
