@@ -10,9 +10,10 @@ interface BodyPanelProps {
   setBodyType: (val: string) => void;
   rawBodyType: string;
   setRawBodyType: (val: string) => void;
+  availableVariables: Set<string>;
 }
 
-export function BodyPanel({ body, setBody, bodyType, setBodyType, rawBodyType, setRawBodyType }: BodyPanelProps) {
+export function BodyPanel({ body, setBody, bodyType, setBodyType, rawBodyType, setRawBodyType, availableVariables }: BodyPanelProps) {
   const [editorInstance, setEditorInstance] = useState<any>(null);
   const [monacoInstance, setMonacoInstance] = useState<any>(null);
   const decorationsRef = useRef<any>(null);
@@ -99,17 +100,21 @@ export function BodyPanel({ body, setBody, bodyType, setBodyType, rawBodyType, s
       const startPos = model.getPositionAt(match.index);
       const endPos = model.getPositionAt(match.index + match[0].length);
       
+      const key = match[0].slice(2, -2).trim();
+      const isAvailable = availableVariables.has(key);
+      const inlineClassName = isAvailable ? 'monaco-env-variable-valid' : 'monaco-env-variable-missing';
+
       newDecorations.push({
         range: new monacoInstance.Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
         options: {
-          inlineClassName: 'monaco-env-variable',
+          inlineClassName: inlineClassName,
           stickiness: 1 // TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
         }
       });
     }
 
     decorationsRef.current.set(newDecorations);
-  }, [body, editorInstance, monacoInstance]);
+  }, [body, editorInstance, monacoInstance, availableVariables]);
 
   const languages = [
     { value: 'text', label: 'Text' },

@@ -12,9 +12,10 @@ interface RequestTabsProps {
   setBodyType: (val: string) => void;
   rawBodyType: string;
   setRawBodyType: (val: string) => void;
+  availableVariables: Set<string>;
 }
 
-export function RequestTabs({ headers, setHeaders, body, setBody, bodyType, setBodyType, rawBodyType, setRawBodyType }: RequestTabsProps) {
+export function RequestTabs({ headers, setHeaders, body, setBody, bodyType, setBodyType, rawBodyType, setRawBodyType, availableVariables }: RequestTabsProps) {
   const [activeTab, setActiveTab] = useState<'headers' | 'body'>('headers');
 
   const activeHeadersCount = headers.filter(h => h.key.trim() !== '').length;
@@ -47,6 +48,7 @@ export function RequestTabs({ headers, setHeaders, body, setBody, bodyType, setB
           <HeadersPanel 
             headers={headers} 
             setHeaders={setHeaders} 
+            availableVariables={availableVariables}
           />
         )}
         
@@ -58,6 +60,7 @@ export function RequestTabs({ headers, setHeaders, body, setBody, bodyType, setB
             setBodyType={setBodyType}
             rawBodyType={rawBodyType}
             setRawBodyType={setRawBodyType}
+            availableVariables={availableVariables}
           />
         )}
       </div>

@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { GripVertical, Trash2 } from 'lucide-react';
+import { HighlightedInput } from './ui/HighlightedInput';
 import type { HeaderItem } from '../types';
 
 interface HeadersPanelProps {
   headers: HeaderItem[];
   setHeaders: (headers: HeaderItem[]) => void;
+  availableVariables: Set<string>;
 }
 
-export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
+export function HeadersPanel({ headers, setHeaders, availableVariables }: HeadersPanelProps) {
   const [isBulkEdit, setIsBulkEdit] = useState(false);
   const [bulkText, setBulkText] = useState('');
   
@@ -298,24 +300,24 @@ export function HeadersPanel({ headers, setHeaders }: HeadersPanelProps) {
                     </div>
 
                     {/* Key Column */}
-                    <div className="border-r border-vsc-panel-border py-[5px] px-[3px]">
-                      <input 
-                        type="text" 
+                    <div className="border-r border-vsc-panel-border relative flex items-center">
+                      <HighlightedInput 
                         value={header.key}
-                        onChange={(e) => updateHeader(header.id, 'key', e.target.value)}
+                        onChange={(val) => updateHeader(header.id, 'key', val)}
                         placeholder="Key"
-                        className="w-full h-full px-2 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
+                        availableVariables={availableVariables}
+                        className="w-full h-full"
                       />
                     </div>
 
                     {/* Value Column */}
-                    <div className="border-r border-vsc-panel-border py-[5px] px-[3px]">
-                      <input 
-                        type="text" 
+                    <div className="border-r border-vsc-panel-border relative flex items-center">
+                      <HighlightedInput 
                         value={header.value}
-                        onChange={(e) => updateHeader(header.id, 'value', e.target.value)}
+                        onChange={(val) => updateHeader(header.id, 'value', val)}
                         placeholder="Value"
-                        className="w-full h-full px-2 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
+                        availableVariables={availableVariables}
+                        className="w-full h-full"
                       />
                     </div>
 

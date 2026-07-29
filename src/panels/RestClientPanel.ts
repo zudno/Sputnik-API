@@ -36,12 +36,13 @@ export class RestClientPanel {
         }
     }
 
-    public static broadcastEnvironments(environments: any[], activeEnvironmentId: string | null) {
+    public static broadcastEnvironments(environments: any[], activeEnvironmentId: string | null, globals: any[]) {
         this.panels.forEach((panel) => {
             panel.webview.postMessage({
                 command: 'environmentsUpdated',
                 environments,
-                activeEnvironmentId
+                activeEnvironmentId,
+                globals
             });
         });
     }

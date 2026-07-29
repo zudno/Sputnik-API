@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
 import { ChevronDown, Check } from "lucide-react";
 import { RequestPanel } from "./components/RequestPanel";
@@ -81,6 +81,18 @@ function MainPanel() {
   
   const [environments, setEnvironments] = useState<any[]>(initialData.environments || []);
   const [activeEnvironmentId, setActiveEnvironmentId] = useState<string | null>(initialData.activeEnvironmentId || null);
+  const [globals, setGlobals] = useState<any[]>(initialData.globals || []);
+  
+  const availableVariables = useMemo(() => {
+    const activeVars = activeEnvironmentId ? environments.find(e => e.id === activeEnvironmentId)?.variables || [] : [];
+    const combined = [...activeVars];
+    for (const g of globals) {
+      if (g.key.trim() !== '' && !combined.some(v => v.key === g.key && v.key.trim() !== '')) {
+        combined.push(g);
+      }
+    }
+    return new Set(combined.filter(v => v.enabled && v.key.trim() !== '').map(v => v.key));
+  }, [activeEnvironmentId, environments, globals]);
   
   const [requestMeta, setRequestMeta] = useState<{name?: string, collectionName?: string, collectionId?: string, requestId?: string, path?: {id: string, name: string}[]}>(initialData.meta || {});
   
@@ -167,6 +179,9 @@ function MainPanel() {
         }
         if (message.activeEnvironmentId !== undefined) {
           setActiveEnvironmentId(message.activeEnvironmentId);
+        }
+        if (message.globals !== undefined) {
+          setGlobals(message.globals);
         }
       } else if (message.command === 'updateMetaPath') {
         setRequestMeta(prev => ({
@@ -262,6 +277,7 @@ function MainPanel() {
             loading={loading} 
             onSend={handleSend} 
             onSave={handleSave}
+            availableVariables={availableVariables}
           />
         </div>
       </div>
@@ -278,6 +294,7 @@ function MainPanel() {
               setBodyType={setBodyType}
               rawBodyType={rawBodyType}
               setRawBodyType={setRawBodyType}
+              availableVariables={availableVariables}
             />
           </div>
         </Panel>

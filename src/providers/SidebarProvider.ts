@@ -43,7 +43,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     requestData: req.requestData!, 
                     meta: { name: req.name, collectionId: rootCollection.id, collectionName: rootCollection.name, path: foldersPath, requestId: req.id },
                     environments: EnvironmentService.getEnvironments(this.context, activeWorkspaceId),
-                    activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId)
+                    activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId),
+                    globals: EnvironmentService.getGlobals(this.context, activeWorkspaceId)
                 };
                 RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
                 RestClientPanel.loadRequest(req.requestData!, req.name, foldersPath, req.id);
@@ -209,7 +210,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             requestData: newReq.requestData!, 
                             meta: { name: newReq.name, collectionId: rootCollection.id, collectionName: rootCollection.name, path: foldersPath, requestId: newReq.id },
                             environments: EnvironmentService.getEnvironments(this.context, activeWorkspaceId),
-                            activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId)
+                            activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId),
+                            globals: EnvironmentService.getGlobals(this.context, activeWorkspaceId)
                         };
                         RestClientPanel.render(this.context, newReq.id, newReq.name, 'request', initialData);
                         RestClientPanel.loadRequest(newReq.requestData!, newReq.name, foldersPath, newReq.id);
@@ -306,7 +308,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             requestData: req.requestData!, 
                             meta: { name: req.name, collectionId: rootCollection.id, collectionName: rootCollection.name, path: foldersPath, requestId: req.id },
                             environments: EnvironmentService.getEnvironments(this.context, activeWorkspaceId),
-                            activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId)
+                            activeEnvironmentId: EnvironmentService.getActiveEnvironmentId(this.context, activeWorkspaceId),
+                            globals: EnvironmentService.getGlobals(this.context, activeWorkspaceId)
                         };
                         RestClientPanel.render(this.context, req.id, req.name, 'request', initialData);
                         RestClientPanel.loadRequest(req.requestData!, req.name, foldersPath, req.id);
@@ -443,10 +446,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             this._view.webview.postMessage({
                 command: 'environmentsUpdated',
                 environments,
-                activeEnvironmentId
+                activeEnvironmentId,
+                globals: EnvironmentService.getGlobals(this.context, activeWorkspaceId)
             });
             
-            RestClientPanel.broadcastEnvironments(environments, activeEnvironmentId);
+            RestClientPanel.broadcastEnvironments(environments, activeEnvironmentId, EnvironmentService.getGlobals(this.context, activeWorkspaceId));
         }
     }
 

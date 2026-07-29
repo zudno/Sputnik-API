@@ -9,8 +9,12 @@
   }
 }
 
-.monaco-env-variable {
+.monaco-env-variable-valid {
   color: #5bb3ff !important;
-  background-color: #1e2a35;
-  border-radius: 3px;
+  font-style: italic;
+}
+
+.monaco-env-variable-missing {
+  color: #ff5c5c !important;
+  font-style: italic;
 }
