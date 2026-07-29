@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { vscode } from "../utils/vscode";
-import { GripVertical, Trash2 } from 'lucide-react';
+import { GripVertical, Trash2, Search, Save } from 'lucide-react';
 
 export interface EnvironmentVariable {
   id: string;
@@ -16,14 +16,19 @@ interface EnvironmentPanelProps {
 }
 
 export function EnvironmentPanel({ environmentId = 'Globals', environmentName, initialVariables = [] }: EnvironmentPanelProps) {
-  const [variables, setVariables] = useState<EnvironmentVariable[]>(
-    initialVariables.length > 0 ? initialVariables : [{ id: crypto.randomUUID(), key: '', value: '', enabled: true }]
-  );
+  const [variables, setVariables] = useState<EnvironmentVariable[]>(() => {
+    const vars = initialVariables.length > 0 ? [...initialVariables] : [];
+    if (vars.length === 0 || vars[vars.length - 1].key !== '' || vars[vars.length - 1].value !== '') {
+      vars.push({ id: crypto.randomUUID(), key: '', value: '', enabled: true });
+    }
+    return vars;
+  });
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverInfo, setDragOverInfo] = useState<{ index: number, position: 'top' | 'bottom' } | null>(null);
 
   const [name, setName] = useState(environmentName);
+  const [filterText, setFilterText] = useState("");
 
   useEffect(() => {
     setName(environmentName);
@@ -31,7 +36,13 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
 
   useEffect(() => {
     if (initialVariables && initialVariables.length > 0) {
-      setVariables(initialVariables);
+      const vars = [...initialVariables];
+      if (vars[vars.length - 1].key !== '' || vars[vars.length - 1].value !== '') {
+        vars.push({ id: crypto.randomUUID(), key: '', value: '', enabled: true });
+      }
+      setVariables(vars);
+    } else {
+      setVariables([{ id: crypto.randomUUID(), key: '', value: '', enabled: true }]);
     }
   }, [initialVariables]);
 
@@ -88,7 +99,7 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
 
   return (
     <div className="flex flex-col h-full bg-vsc-editor-bg text-vsc-foreground px-4 pt-3 pb-1">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-3">
         <div className="flex items-center text-[13px] h-[28px]">
           {environmentId === 'Globals' ? (
              <div className="inline-grid items-center">
@@ -118,10 +129,36 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
         
         <button 
           onClick={handleSave}
-          className="bg-[#0cbb52] hover:bg-[#0aa647] text-white px-4 py-1.5 rounded text-[13px] cursor-pointer outline-none border-none transition-colors"
+          className="flex items-center gap-1.5 bg-transparent hover:bg-[#2a2d2e] text-[#cccccc] hover:text-white px-2.5 py-1.5 rounded text-[13px] cursor-pointer outline-none border-none transition-colors"
         >
-          Save
+          <Save size={16} />
+          <span>Save</span>
         </button>
+      </div>
+
+      <hr className="border-0 border-t border-vsc-panel-border -mx-4 mb-4" />
+      
+      {environmentId === 'Globals' ? (
+        <p className="text-[13px] text-[#cccccc] mb-4 leading-relaxed">
+          Global variables for a workspace are a set of variables that are always available within the scope of that workspace. They can be viewed and edited by anyone in that workspace.
+        </p>
+      ) : (
+        <p className="text-[13px] text-[#cccccc] mb-4 leading-relaxed">
+          Environment variables are tied to this specific environment. They override global variables with the same name.
+        </p>
+      )}
+
+      <div className="mb-4 relative w-fit">
+        <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+          <Search size={14} className="text-[#888888]" />
+        </div>
+        <input
+          type="text"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          placeholder="Filter variables"
+          className="pl-8 pr-3 py-1.5 bg-transparent border border-vsc-panel-border rounded text-[13px] text-vsc-foreground focus:border-[#007fd4] outline-none w-[300px]"
+        />
       </div>
 
       <div className="flex-1 overflow-auto min-h-0">
@@ -134,7 +171,12 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
           </div>
           
           <div className="flex-grow flex flex-col">
-            {variables.map((v, index) => {
+            {variables.map((v, i) => ({ v, index: i })).filter(({ v, index }) => {
+              const isLastEmptyRow = index === variables.length - 1 && !v.key && !v.value;
+              if (isLastEmptyRow) return true;
+              if (!filterText) return true;
+              return v.key.toLowerCase().includes(filterText.toLowerCase()) || v.value.toLowerCase().includes(filterText.toLowerCase());
+            }).map(({ v, index }) => {
               const isLastEmptyRow = index === variables.length - 1 && !v.key && !v.value;
               const isDragged = draggedIndex === index;
               
