@@ -162,7 +162,6 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
                 size={1}
                 onChange={e => {
                   setName(e.target.value);
-                  setIsDirty(true);
                 }}
                 onBlur={handleRename}
                 onFocus={e => e.target.select()}

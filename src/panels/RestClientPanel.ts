@@ -211,8 +211,8 @@ export class RestClientPanel {
                             env.name = message.name;
                             await EnvironmentService.saveEnvironments(context, activeWorkspaceId, environments);
                             this.sidebarProvider.sendStateToWebview();
-                            
-                            const panel = this.panels.get(message.id);
+                            const panelId = message.id === 'Globals' ? 'env_Globals' : `env_${message.id}`;
+                            const panel = this.panels.get(panelId);
                             if (panel) {
                                 const hasDirtyMark = panel.title.endsWith(' ●');
                                 panel.title = message.name + (hasDirtyMark ? ' ●' : '');
