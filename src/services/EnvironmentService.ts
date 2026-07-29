@@ -5,6 +5,7 @@ export interface EnvironmentVariable {
     key: string;
     value: string;
     enabled: boolean;
+    isSensitive?: boolean;
 }
 
 export interface Environment {

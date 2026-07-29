@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { vscode } from "../utils/vscode";
-import { GripVertical, Trash2, Search, Save } from 'lucide-react';
+import { GripVertical, Trash2, Search, Save, Key, Eye, EyeOff } from 'lucide-react';
 
 export interface EnvironmentVariable {
   id: string;
   key: string;
   value: string;
   enabled: boolean;
+  isSensitive?: boolean;
 }
 
 interface EnvironmentPanelProps {
@@ -29,6 +30,8 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
 
   const [name, setName] = useState(environmentName);
   const [filterText, setFilterText] = useState("");
+  const [keyColWidth, setKeyColWidth] = useState(220); // Default wider value column
+  const [revealedIds, setRevealedIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setName(environmentName);
@@ -97,6 +100,25 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
     });
   };
 
+  const handleMouseDownOnResizer = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = keyColWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX;
+      setKeyColWidth(Math.max(100, startWidth + delta));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
   return (
     <div className="flex flex-col h-full bg-vsc-editor-bg text-vsc-foreground px-4 pt-3 pb-1">
       <div className="flex justify-between items-center mb-3">
@@ -163,9 +185,18 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
 
       <div className="flex-1 overflow-auto min-h-0">
         <div className="flex flex-col border-l border-r border-t border-vsc-panel-border bg-vsc-editor-bg">
-          <div className="grid grid-cols-[44px_1fr_1fr_40px] border-b border-vsc-panel-border bg-[#222222] font-semibold text-[12px] h-[34px]">
+          <div 
+            className="grid border-b border-vsc-panel-border bg-[#222222] font-semibold text-[12px] h-[34px]"
+            style={{ gridTemplateColumns: `44px ${keyColWidth}px 1fr 40px` }}
+          >
             <div className="border-r border-vsc-panel-border flex items-center justify-center"></div>
-            <div className="px-2 border-r border-vsc-panel-border flex items-center">Variable</div>
+            <div className="border-r border-vsc-panel-border flex items-center relative group">
+              <span className="px-2">Variable</span>
+              <div 
+                className="absolute right-[-3px] top-0 bottom-0 w-[6px] cursor-col-resize hover:bg-[#007fd4] z-10 transition-colors"
+                onMouseDown={handleMouseDownOnResizer}
+              />
+            </div>
             <div className="px-2 border-r border-vsc-panel-border flex items-center">Value</div>
             <div className="px-2"></div>
           </div>
@@ -234,10 +265,11 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
                     setDraggedIndex(null);
                     setDragOverInfo(null);
                   }}
-                  className={`relative h-[34px] grid grid-cols-[44px_1fr_1fr_40px] border-b border-vsc-panel-border group transition-colors
+                  className={`relative h-[34px] grid border-b border-vsc-panel-border group transition-colors
                     ${isLastEmptyRow ? '' : 'hover:bg-[#222222]'}
                     ${isDragged ? 'opacity-50 bg-[#2a2d2e]' : ''}
                   `}
+                  style={{ gridTemplateColumns: `44px ${keyColWidth}px 1fr 40px` }}
                 >
                   {dragOverInfo?.index === index && dragOverInfo?.position === 'top' && (
                     <div className="absolute top-0 left-0 w-full h-[2px] bg-[#ff6c37] pointer-events-none z-10" />
@@ -264,25 +296,43 @@ export function EnvironmentPanel({ environmentId = 'Globals', environmentName, i
                   </div>
 
                   {/* Key Column */}
-                  <div className="border-r border-vsc-panel-border py-[5px] px-[3px]">
+                  <div className="border-r border-vsc-panel-border py-[5px] px-[3px] relative flex">
                     <input 
                       type="text" 
                       value={v.key}
                       onChange={(e) => updateVariable(v.id, 'key', e.target.value)}
                       placeholder="Add variable"
-                      className="w-full h-full px-2 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
+                      className="w-full h-full px-2 pr-6 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
                     />
+                    {!isLastEmptyRow && (
+                      <button
+                        onClick={() => updateVariable(v.id, 'isSensitive', !v.isSensitive)}
+                        className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 flex items-center justify-center rounded hover:bg-[#333333] transition-colors ${v.isSensitive ? 'bg-[#2a2d2e] text-[#cccccc]' : 'text-[#666666] opacity-0 group-hover:opacity-100'}`}
+                        title={v.isSensitive ? "Remove sensitive mark" : "Mark as sensitive"}
+                      >
+                        <Key size={14} />
+                      </button>
+                    )}
                   </div>
 
                   {/* Value Column */}
-                  <div className="border-r border-vsc-panel-border py-[5px] px-[3px]">
+                  <div className="border-r border-vsc-panel-border py-[5px] px-[3px] relative flex">
                     <input 
-                      type="text" 
+                      type={v.isSensitive && !revealedIds[v.id] ? "password" : "text"}
                       value={v.value}
                       onChange={(e) => updateVariable(v.id, 'value', e.target.value)}
                       placeholder=""
-                      className="w-full h-full px-2 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors"
+                      className={`w-full h-full px-2 bg-transparent border border-transparent focus:border-[#444444] focus:bg-[#1e1e1e] rounded-none outline-none text-vsc-foreground placeholder-[#666666] font-sans text-[13px] transition-colors ${v.isSensitive && !revealedIds[v.id] ? 'font-mono' : ''} ${v.isSensitive ? 'pr-8' : ''}`}
                     />
+                    {!isLastEmptyRow && v.isSensitive && (
+                      <button
+                        onClick={() => setRevealedIds(prev => ({ ...prev, [v.id]: !prev[v.id] }))}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 flex items-center justify-center rounded bg-[#2a2d2e] hover:bg-[#333333] transition-colors text-[#cccccc]"
+                        title={revealedIds[v.id] ? "Hide value" : "Show value"}
+                      >
+                        {revealedIds[v.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    )}
                   </div>
 
                   {/* Actions Column */}
